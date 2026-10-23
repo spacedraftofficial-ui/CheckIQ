@@ -5,6 +5,7 @@ import { sha256 } from "../../lib/crypto.js";
 import { getLogger } from "../../lib/logger.js";
 import { sendEmail } from "../../services/email.service.js";
 import { getBooleanConfig, getNumberConfig, getStringConfig } from "../../services/config.service.js";
+import { getConfig } from "../../config.js";
 
 const VERIFICATION_BASE_URL = "https://checkiq.org";
 
@@ -74,7 +75,7 @@ export async function sendVerificationEmail(input: SendVerificationEmailInput): 
   let sent = false;
   if (resend) {
     const { data, error } = await resend.emails.send({
-      from: await getStringConfig("email.from", "CheckIQ <no-reply@checkiq.org>"),
+      from: getConfig().EMAIL_FROM,
       to: input.email,
       subject,
       html,
