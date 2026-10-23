@@ -10,6 +10,7 @@ process.env.DATABASE_URL =
   process.env.TEST_DATABASE_URL ??
   "mysql://checkiq:checkiq_dev_pw@127.0.0.1:3306/checkiq_test";
 process.env.TEST_DATABASE_URL = process.env.DATABASE_URL;
+process.env.EMAIL_ENABLED = "false";
 process.env.JWT_ACCESS_SECRET = "test-access-secret-that-is-at-least-32-chars-long";
 process.env.PII_ENCRYPTION_KEY = "dGVzdC1waWktZW5jcnlwdGlvbi1rZXktZm9yLWNoZWNpaS10ZXN0cw==";
 process.env.STORAGE_DIR = "../../.local/test-storage";

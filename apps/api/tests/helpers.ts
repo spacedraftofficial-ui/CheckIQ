@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import request from "supertest";
+import { eq } from "drizzle-orm";
 import { getDatabase, schema } from "../src/db/client.js";
 import { runSeed } from "../src/db/seed.js";
 import { createApp } from "../src/app.js";
@@ -104,15 +105,31 @@ export async function createCandidate(overrides: Partial<{ candidateId: string; 
     throw new Error(`Candidate signup failed: ${response.status} ${JSON.stringify(response.body)}`);
   }
 
-  const sessionUser = response.body.data.user;
+  // Mark email as verified in the test database
+  const { db } = getDatabase();
+  await db
+    .update(schema.users)
+    .set({ isEmailVerified: true })
+    .where(eq(schema.users.emailNormalized, email.toLowerCase()));
+
+  const login = await api({
+    method: "post",
+    path: "/api/auth/login",
+    body: { identifier: email, password: TEST_PASSWORD },
+  });
+  if (login.status !== 200) {
+    throw new Error(`Candidate login failed: ${login.status} ${JSON.stringify(login.body)}`);
+  }
+
+  const sessionUser = login.body.data.user;
   const dashboard = await api({
     method: "get",
     path: "/api/dashboard",
-    token: response.body.data.accessToken,
+    token: login.body.data.accessToken,
   });
 
   return {
-    token: response.body.data.accessToken,
+    token: login.body.data.accessToken,
     userId: sessionUser.id,
     candidateId,
     caseId: dashboard.body.data.caseId,
@@ -219,6 +236,7 @@ export async function createCandidateWithoutCase(
     passwordHash,
     fullName: overrides.fullName ?? "Registered Candidate",
     mobile: "+919812345678",
+    isEmailVerified: true,
   });
   await db.insert(schema.userRoles).values({
     userId,
@@ -269,6 +287,7 @@ export async function createStaff(roles: string[]): Promise<StaffSession> {
     passwordHash,
     fullName: "Test Staff",
     mobile: "+919800000000",
+    isEmailVerified: true,
   });
   await db.insert(schema.userRoles).values(
     roles.map((role) => ({ userId, roleCode: role, assignedBy: null })),

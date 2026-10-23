@@ -18,13 +18,14 @@ describe("candidate signup", () => {
 
   it("signs a candidate up with a Candidate ID that has not been pre-registered", async () => {
     const candidateId = uniqueCandidateId();
+    const email = `${candidateId.toLowerCase()}@example.test`;
     const response = await api({
       method: "post",
       path: "/api/auth/signup",
       body: {
         candidateId,
         fullName: "New Candidate",
-        email: `${candidateId.toLowerCase()}@example.test`,
+        email,
         mobile: "+919812345678",
         password: "Str0ng!Passw0rd",
         confirmPassword: "Str0ng!Passw0rd",
@@ -32,9 +33,10 @@ describe("candidate signup", () => {
     });
 
     expect(response.status).toBe(201);
-    expect(response.body.data.user.candidateId).toBe(candidateId);
-    expect(response.body.data.user.roles).toEqual(["CANDIDATE"]);
-    expect(response.body.data.accessToken).toBeTruthy();
+    expect(response.body.data.email).toBe(email);
+    expect(response.body.data.fullName).toBe("New Candidate");
+    expect(response.body.data.requiresEmailVerification).toBe(true);
+    expect(response.body.data.userId).toBeTruthy();
   });
 
   it("creates the candidate's BGV case in the document-upload state", async () => {

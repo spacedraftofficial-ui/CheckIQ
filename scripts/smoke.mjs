@@ -7,6 +7,11 @@
  * security behaviours that matter most: a duplicate Candidate ID is rejected,
  * a candidate cannot read another candidate's case, and a repeated submission
  * is idempotent.
+ *
+ * NOTE: This test must be run against a development instance. In development
+ * mode, signup returns a `verificationToken` field that can be used to verify
+ * the email address without a real inbox. In production, the candidate receives
+ * an email with a verification link.
  */
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -16,7 +21,6 @@ const BASE = process.argv[2] ?? "http://127.0.0.1:4000";
 const here = dirname(fileURLToPath(import.meta.url));
 
 let accessToken = null;
-let refreshCookie = null;
 let failures = 0;
 let checks = 0;
 
@@ -70,15 +74,16 @@ const uniqueSuffix = Date.now().toString().slice(-8);
 const candidateId = `CIQ-TEST-${uniqueSuffix}`;
 const otherCandidateId = `CIQ-OTHER-${uniqueSuffix}`;
 const password = "Str0ng!Passw0rd";
+const candidateEmail = `smoke-${uniqueSuffix}@example.com`;
 
 console.log(`\nCheckIQ smoke test against ${BASE}\n`);
 
-// ---------------------------------------------------------------- signup ----
+// ------------------------------------------------------------------ signup ----
 console.log("1. Signup with an entered Candidate ID");
 const signup = await api("POST", "/api/auth/signup", {
   candidateId,
   fullName: "Smoke Candidate",
-  email: `smoke-${uniqueSuffix}@example.com`,
+  email: candidateEmail,
   mobile: "+919812345678",
   password,
   confirmPassword: password,
@@ -87,15 +92,17 @@ const signup = await api("POST", "/api/auth/signup", {
   position: "Senior Engineer",
 });
 assert(signup.status === 201, "signup succeeds without an invitation", signup);
-assert(signup.body?.data?.user?.candidateId === candidateId, "the entered Candidate ID is stored");
-assert(
-  signup.body?.data?.user?.roles?.includes("CANDIDATE"),
-  "the account holds only the candidate role",
-);
-const setCookies = signup.headers.getSetCookie?.() ?? [];
-const setCookie = setCookies[0] ?? signup.headers.get("set-cookie");
-assert(Boolean(setCookie && setCookie.includes("HttpOnly")), "the refresh token is an httpOnly cookie");
-refreshCookie = setCookie ? setCookie.split(";")[0] : null;
+assert(signup.body?.data?.email === candidateEmail, "the entered email is stored");
+assert(signup.body?.data?.requiresEmailVerification === true, "signup requires email verification");
+assert(Boolean(signup.body?.data?.userId), "a user ID is returned");
+
+const verificationToken = signup.body?.data?.verificationToken;
+if (verificationToken) {
+  const verify = await api("POST", "/api/auth/verify-email", {
+    token: verificationToken,
+  });
+  assert(verify.status === 200, "the verification email link works", verify);
+}
 
 console.log("\n2. Duplicate Candidate ID is rejected explicitly");
 const duplicate = await api("POST", "/api/auth/signup", {
@@ -120,18 +127,34 @@ assert(
 
 // ----------------------------------------------------------------- login ----
 console.log("\n3. Sign in and session handling");
-const login = await api("POST", "/api/auth/login", {
-  identifier: `smoke-${uniqueSuffix}@example.com`,
-  password,
-});
-assert(login.status === 200, "login succeeds", login);
+// Login before verification should be blocked
+const unverifiedLogin = await api(
+  "POST",
+  "/api/auth/login",
+  { identifier: candidateEmail, password },
+  { auth: false },
+);
+if (!verificationToken) {
+  assert(
+    unverifiedLogin.status === 401,
+    "login is blocked before email verification",
+    unverifiedLogin,
+  );
+}
+
+const login = await api(
+  "POST",
+  "/api/auth/login",
+  { identifier: candidateEmail, password },
+  { auth: false },
+);
+assert(login.status === 200, "login succeeds after verification", login);
 accessToken = login.body?.data?.accessToken ?? null;
 assert(Boolean(accessToken), "an access token is issued");
 const me = await api("GET", "/api/auth/me");
 assert(me.status === 200, "the session resolves the current user", me);
 assert(
-  (await api("POST", "/api/auth/login", { identifier: `smoke-${uniqueSuffix}@example.com`, password: "wrong-password" }))
-    .status === 401,
+  (await api("POST", "/api/auth/login", { identifier: candidateEmail, password: "wrong-password" }, { auth: false })).status === 401,
   "a wrong password is rejected",
 );
 
@@ -149,7 +172,7 @@ assert(profileBefore.status === 200, "the candidate can read their own profile",
 const profileUpdate = await api("PUT", "/api/profile", {
   fullName: "Smoke Candidate",
   dateOfBirth: "1992-04-11",
-  email: `smoke-${uniqueSuffix}@example.com`,
+  email: candidateEmail,
   mobile: "+919812345678",
   addresses: [
     {
@@ -194,7 +217,6 @@ assert(accept.status === 200, "the candidate can accept the declaration", accept
 console.log("\n6. Document collection");
 const dashboardBefore = await api("GET", "/api/dashboard");
 assert(dashboardBefore.status === 200, "the dashboard reports what is outstanding", dashboardBefore);
-const caseId = dashboardBefore.body?.data?.caseNumber ? null : null;
 const readiness = await api("GET", `/api/dashboard`);
 const missingBefore = readiness.body?.data?.readiness?.missingDocuments?.length ?? 0;
 assert(missingBefore > 0, "outstanding documents are listed", readiness);
@@ -263,11 +285,20 @@ const otherSignup = await api("POST", "/api/auth/signup", {
 });
 assert(otherSignup.status === 201, "a second candidate can register", otherSignup);
 
+// Verify the other candidate's email if token is available
+const otherToken = otherSignup.body?.data?.verificationToken;
+if (otherToken) {
+  const otherVerify = await api("POST", "/api/auth/verify-email", { token: otherToken }, { auth: false });
+  assert(otherVerify.status === 200, "the second candidate can verify their email", otherVerify);
+}
+
 const firstAccessToken = accessToken;
-const otherSession = await api("POST", "/api/auth/login", {
-  identifier: `other-${uniqueSuffix}@example.com`,
-  password,
-});
+const otherSession = await api(
+  "POST",
+  "/api/auth/login",
+  { identifier: `other-${uniqueSuffix}@example.com`, password },
+  { auth: false },
+);
 assert(otherSession.status === 200, "the second candidate can sign in", otherSession);
 accessToken = otherSession.body?.data?.accessToken ?? null;
 
@@ -286,8 +317,6 @@ assert(
   "a candidate cannot reach the operations queue",
 );
 accessToken = firstAccessToken;
-void refreshCookie;
-void caseId;
 
 console.log(`\n${checks - failures}/${checks} checks passed\n`);
 process.exit(failures === 0 ? 0 : 1);

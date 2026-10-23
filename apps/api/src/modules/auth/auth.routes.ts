@@ -38,14 +38,17 @@ authRouter.post(
   validate({ body: signupRequestSchema }),
   async (req, res) => {
     const result = await signup(req.body, requestContext(req));
-    res.status(201).json({
-      data: {
-        userId: result.userId,
-        email: result.email,
-        fullName: result.fullName,
-        requiresEmailVerification: result.requiresEmailVerification,
-      },
-    });
+    const responseData: Record<string, unknown> = {
+      userId: result.userId,
+      email: result.email,
+      fullName: result.fullName,
+      requiresEmailVerification: result.requiresEmailVerification,
+    };
+    // Only expose the verification token in development for testing convenience.
+    if (result.verificationToken) {
+      responseData.verificationToken = result.verificationToken;
+    }
+    res.status(201).json({ data: responseData });
   },
 );
 

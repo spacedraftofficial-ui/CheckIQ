@@ -155,6 +155,8 @@ export interface SignupResult {
   email: string;
   fullName: string;
   requiresEmailVerification: boolean;
+  /** Raw verification token; only populated in development for testing convenience. */
+  verificationToken?: string | null;
 }
 
 export async function signup(input: SignupRequest, context: RequestContext): Promise<SignupResult> {
@@ -320,17 +322,22 @@ export async function signup(input: SignupRequest, context: RequestContext): Pro
     },
   });
 
-  // Send email verification
+   // Send email verification
   const verificationEnabled = await getBooleanConfig("email_verification.enabled", true);
+  let verificationToken: string | null = null;
   if (verificationEnabled) {
     try {
       const { sendVerificationEmail } = await import("./email-verification.service.js");
-      await sendVerificationEmail({
+      const result = await sendVerificationEmail({
         userId,
         email: input.email.trim(),
         fullName: input.fullName.trim(),
         candidateId: normalisedCandidateId,
       });
+      // In development, return the verification token for testing convenience.
+      if (getConfig().NODE_ENV === "development") {
+        verificationToken = result.token;
+      }
     } catch (emailErr) {
       getLogger().warn({ userId, err: emailErr }, "Failed to send verification email");
     }
@@ -341,6 +348,7 @@ export async function signup(input: SignupRequest, context: RequestContext): Pro
     email: input.email.trim(),
     fullName: input.fullName.trim(),
     requiresEmailVerification: verificationEnabled,
+    verificationToken: getConfig().NODE_ENV === "development" ? verificationToken : undefined,
   };
 }
 

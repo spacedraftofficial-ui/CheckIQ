@@ -5,7 +5,6 @@ import { sha256 } from "../../lib/crypto.js";
 import { getLogger } from "../../lib/logger.js";
 import { sendEmail } from "../../services/email.service.js";
 import { getBooleanConfig, getNumberConfig, getStringConfig } from "../../services/config.service.js";
-import { getConfig } from "../../config.js";
 
 const VERIFICATION_BASE_URL = "https://checkiq.org";
 
@@ -16,27 +15,14 @@ export interface SendVerificationEmailInput {
   candidateId?: string | null;
 }
 
-async function getResendClient() {
-  const resendApiKey = await getStringConfig("resend.api_key", "");
-  if (!resendApiKey) {
-    // Fallback to environment variable
-    const envKey = process.env.RESEND_API_KEY;
-    if (!envKey) {
-      getLogger().warn("No Resend API key configured");
-      return null;
-    }
-    const { Resend } = await import("resend");
-    return new Resend(envKey);
-  }
-  const { Resend } = await import("resend");
-  return new Resend(resendApiKey);
-}
-
 /**
  * Creates a new email verification token for a user and sends the verification
- * email. Returns the verification URL.
+ * email. Returns the verification URL and the raw token (the latter only to
+ * be used in development/test for convenience).
  */
-export async function sendVerificationEmail(input: SendVerificationEmailInput): Promise<string> {
+export async function sendVerificationEmail(
+  input: SendVerificationEmailInput,
+): Promise<{ verifyUrl: string; token: string }> {
   const logger = getLogger();
   const { db } = getDatabase();
 
@@ -71,38 +57,19 @@ export async function sendVerificationEmail(input: SendVerificationEmailInput): 
     <p>If you did not sign up for a CheckIQ background verification, you can ignore this email.</p>
   `;
 
-  const resend = await getResendClient();
-  let sent = false;
-  if (resend) {
-    const { data, error } = await resend.emails.send({
-      from: getConfig().EMAIL_FROM,
-      to: input.email,
-      subject,
-      html,
-    });
-    if (!error && data?.id) {
-      sent = true;
-      logger.info({ userId: input.userId, providerId: data.id }, "Verification email sent via Resend");
-    } else {
-      logger.warn({ userId: input.userId, error: error?.message }, "Resend failed, trying SMTP fallback");
-    }
+  const result = await sendEmail({
+    to: input.email,
+    subject,
+    html,
+  });
+
+  if (result.delivered) {
+    logger.info({ userId: input.userId, providerId: result.providerId }, "Verification email sent");
+  } else {
+    logger.error({ userId: input.userId, error: result.error }, "Failed to send verification email");
   }
 
-  if (!sent) {
-    // Fall back to SMTP
-    const result = await sendEmail({
-      to: input.email,
-      subject,
-      html,
-    });
-    if (result.delivered) {
-      logger.info({ userId: input.userId }, "Verification email sent via SMTP");
-    } else {
-      logger.error({ userId: input.userId, error: result.error }, "Failed to send verification email");
-    }
-  }
-
-  return verifyUrl;
+  return { verifyUrl, token };
 }
 
 export interface VerifyEmailResult {
