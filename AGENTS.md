@@ -88,6 +88,23 @@ Hiding a button in React is a UX affordance, not a control.
 - `node scripts/smoke.mjs` exercises the candidate and operations journeys
   against a running instance.
 
+## Production deployment
+
+The API can serve the frontend SPA from its build directory in production,
+allowing a single Node.js process to serve both the API and the static frontend:
+
+1. Build contracts, API, and web: `npm run build` (or workspace-equivalent commands).
+2. The API serves `apps/web/dist` as static files when it exists at
+   `dist/../web/dist` relative to the compiled API entry point.
+3. Environment: set `NODE_ENV=production`, `CORS_ORIGINS` to the site's domain
+   (or leave empty when serving the SPA from the same origin), `COOKIE_SECURE=true`,
+   and configure all secrets via environment variables.
+
+For Hostinger single-site deployment:
+- Root: `./`
+- Build command: `npm run build -w @checkiq/contracts && npm run build -w @checkiq/api && npm run build -w @checkiq/web`
+- Entry file: `dist/index.js` (relative to `apps/api`)
+
 ## Before saying a feature is done
 
 ```bash

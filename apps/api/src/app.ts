@@ -18,6 +18,11 @@ import { reportRouter } from "./modules/reports/report.routes.js";
 import { reviewRouter } from "./modules/reviews/review.routes.js";
 import { scoringRouter } from "./modules/scoring/scoring.routes.js";
 import { verificationRouter } from "./modules/verification/verification.routes.js";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { existsSync } from "node:fs";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /**
  * Express application assembly.
@@ -80,6 +85,17 @@ export function createApp(): Express {
   app.use("/api", authenticate, reportRouter);
   app.use("/api", authenticate, notificationsRouter);
   app.use("/api", authenticate, adminRouter);
+
+  // Serve the frontend SPA in production. The frontend dist is built into
+  // apps/web/dist; when the API is built (dist/), it sits one level up.
+  const frontendDist = resolve(__dirname, "../../web/dist");
+  if (existsSync(frontendDist)) {
+    app.use(express.static(frontendDist, { index: false }));
+    // All non-API routes serve the SPA entry point.
+    app.get(/^(?!\/api).*/, (_req, res) => {
+      res.sendFile(resolve(frontendDist, "index.html"));
+    });
+  }
 
   app.use(notFoundHandler);
   app.use(errorHandler);
