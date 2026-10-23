@@ -3,6 +3,8 @@ import { getConfig } from "./config.js";
 import { closeDatabase, getDatabase } from "./db/client.js";
 import { getLogger } from "./lib/logger.js";
 import { ensureStorageDirectories } from "./lib/storage.js";
+import { applyMigrations, defaultMigrationsFolder } from "./db/apply-migrations.js";
+import { runSeed } from "./db/seed.js";
 
 /**
  * Server bootstrap.
@@ -13,6 +15,23 @@ async function main(): Promise<void> {
 
   await ensureStorageDirectories();
   getDatabase();
+
+  // Run migrations on startup
+  try {
+    const applied = await applyMigrations(config.DATABASE_URL, defaultMigrationsFolder());
+    logger.info({ applied: applied.length }, "Migrations applied");
+  } catch (err) {
+    logger.error({ err }, "Migrations failed");
+  }
+
+  // Run seed on startup
+  try {
+    const { db } = getDatabase();
+    await runSeed(db);
+    logger.info("Seed completed");
+  } catch (err) {
+    logger.error({ err }, "Seed failed");
+  }
 
   const app = createApp();
   const server = app.listen(config.PORT, config.HOST, () => {
