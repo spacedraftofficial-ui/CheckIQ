@@ -9,7 +9,7 @@ import { getLogger } from "../lib/logger.js";
  * they are the primary credential-stuffing and account-enumeration targets.
  */
 
-function build(options: {
+function build(options: { 
   windowMinutes: number;
   max: number;
   message: string;
