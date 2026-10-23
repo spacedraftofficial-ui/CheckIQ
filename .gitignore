@@ -1,0 +1,21 @@
+node_modules/
+dist/
+build/
+coverage/
+.vite/
+*.local
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+logs/
+*.log
+storage/
+tmp/
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Local MySQL runtime directory
+.local/

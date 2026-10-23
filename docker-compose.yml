@@ -1,0 +1,30 @@
+# Disposable MySQL 8.4 for local development and for the test suite.
+#
+# The application runs against MySQL 8.4. This file is a convenience for
+# environments without a local server; it is not a production topology.
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: checkiq-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: checkiq_root_pw
+      MYSQL_DATABASE: checkiq
+      MYSQL_USER: checkiq
+      MYSQL_PASSWORD: checkiq_dev_pw
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+00:00
+    ports:
+      - "3306:3306"
+    volumes:
+      - checkiq-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pcheckiq_root_pw"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  checkiq-mysql-data:

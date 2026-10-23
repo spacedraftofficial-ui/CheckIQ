@@ -1,0 +1,43 @@
+{
+  "name": "checkiq",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CheckIQ — Background Verification (BGV) platform",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @checkiq/contracts && npm run build -w @checkiq/api && npm run build -w @checkiq/web",
+    "build:contracts": "npm run build -w @checkiq/contracts",
+    "typecheck": "npm run typecheck -w @checkiq/contracts && npm run typecheck -w @checkiq/api && npm run typecheck -w @checkiq/web",
+    "lint": "npm run lint -w @checkiq/api && npm run lint -w @checkiq/web",
+    "dev": "concurrently -n api,web -c cyan,magenta \"npm run dev -w @checkiq/api\" \"npm run dev -w @checkiq/web\"",
+    "dev:api": "npm run dev -w @checkiq/api",
+    "dev:web": "npm run dev -w @checkiq/web",
+    "db:generate": "npm run db:generate -w @checkiq/api",
+    "db:migrate": "npm run db:migrate -w @checkiq/api",
+    "db:seed": "npm run db:seed -w @checkiq/api",
+    "db:studio": "npm run db:studio -w @checkiq/api",
+    "test": "npm run test -w @checkiq/api && npm run test -w @checkiq/web",
+    "test:api": "npm run test -w @checkiq/api",
+    "test:web": "npm run test -w @checkiq/web",
+    "db:seed:local-accounts": "npm run db:seed:local-accounts -w @checkiq/api"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "concurrently": "^10.0.6",
+    "eslint": "^10.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.10",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.72.0"
+  }
+}

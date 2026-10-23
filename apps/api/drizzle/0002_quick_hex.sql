@@ -1,0 +1,1 @@
+ALTER TABLE `notifications` MODIFY COLUMN `deduplication_key` varchar(255);

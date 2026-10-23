@@ -1,0 +1,365 @@
+import { useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Download, FileText, ShieldCheck } from "lucide-react";
+import { ApiError, request } from "../../lib/api";
+import { EmptyState, ErrorState, LoadingBlock, StatusBadge } from "../../components/States";
+
+interface CaseDetail {
+  id: string;
+  caseNumber: string;
+  candidateId: string;
+  candidateName: string;
+  candidateEmail: string;
+  company: string | null;
+  department: string | null;
+  position: string | null;
+  packageName: string;
+  status: string;
+  assignedVerifierName: string | null;
+  assignedReviewerName: string | null;
+  submittedAt: string | null;
+  score: number | null;
+  scoreOutcome: string | null;
+  eligibilityResult: string | null;
+  version: number;
+}
+
+interface HistoryRow {
+  id: string;
+  fromStatus: string | null;
+  toStatus: string;
+  actorName: string | null;
+  actorRole: string | null;
+  reason: string | null;
+  createdAt: string;
+}
+
+interface CheckRow {
+  id: string;
+  label: string;
+  checkTypeCode: string;
+  isMandatory: boolean;
+  status: string;
+  outcomeCode: string | null;
+  verifierName: string | null;
+  remarks: string | null;
+  evidenceReference: string | null;
+  completedAt: string | null;
+}
+
+interface DocumentRow {
+  id: string;
+  label: string;
+  status: string;
+  versionCount: number;
+  currentVersion: { id: string; originalFilename: string; sizeBytes: number } | null;
+}
+
+export function CaseDetailPage() {
+  const { caseId } = useParams<{ caseId: string }>();
+  const queryClient = useQueryClient();
+
+  const detail = useQuery({
+    queryKey: ["ops", "case", caseId],
+    queryFn: () => request<CaseDetail>(`/cases/${caseId}`),
+    enabled: Boolean(caseId),
+  });
+
+  const checks = useQuery({
+    queryKey: ["ops", "case", caseId, "checks"],
+    queryFn: () => request<CheckRow[]>(`/cases/${caseId}/checks`),
+    enabled: Boolean(caseId),
+  });
+
+  const documents = useQuery({
+    queryKey: ["ops", "case", caseId, "documents"],
+    queryFn: () => request<DocumentRow[]>(`/cases/${caseId}/documents`),
+    enabled: Boolean(caseId),
+  });
+
+  const history = useQuery({
+    queryKey: ["ops", "case", caseId, "history"],
+    queryFn: () => request<HistoryRow[]>(`/cases/${caseId}/history`),
+    enabled: Boolean(caseId),
+  });
+
+  const clarify = useMutation({
+    mutationFn: (input: { issueSummary: string; requiredAction: string; checkId?: string }) =>
+      request(`/cases/${caseId}/clarifications`, { method: "POST", body: input }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["ops", "case", caseId] });
+    },
+  });
+
+  if (detail.isLoading) return <LoadingBlock label="Loading case" />;
+  if (detail.isError) {
+    return (
+      <ErrorState
+        title="We could not load this case"
+        message={detail.error instanceof Error ? detail.error.message : undefined}
+        onRetry={() => void detail.refetch()}
+      />
+    );
+  }
+
+  const data = detail.data;
+  if (!data) return <LoadingBlock label="Loading case" />;
+
+  return (
+    <div className="space-y-6">
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm text-ink-500">
+            <Link to="/ops" className="font-semibold text-brand-700 underline">
+              All cases
+            </Link>
+          </p>
+          <h1 className="mt-1 text-2xl font-bold text-ink-900">{data.candidateName}</h1>
+          <p className="mt-1 text-sm text-ink-600">
+            <span className="font-mono">{data.caseNumber}</span> ·{" "}
+            <span className="font-mono">{data.candidateId}</span> · {data.packageName}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <StatusBadge tone={data.status === "BGV_APPROVED" ? "success" : "info"}>
+            {data.status.replace(/_/g, " ").toLowerCase()}
+          </StatusBadge>
+          <Link className="btn-secondary" to={`/ops/cases/${data.id}/report`}>
+            <FileText className="h-4 w-4" aria-hidden="true" />
+            View report
+          </Link>
+          <Link to={`/ops/cases/${data.id}/verification`} className="btn-primary">
+            <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+            Verification
+          </Link>
+        </div>
+      </header>
+
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Detail label="Position" value={data.position ?? "—"} />
+        <Detail label="Company" value={data.company ?? "—"} />
+        <Detail label="Department" value={data.department ?? "—"} />
+        <Detail
+          label="Score"
+          value={data.score === null ? "Not scored" : `${data.score.toFixed(2)}%`}
+        />
+        <Detail label="Verifier" value={data.assignedVerifierName ?? "Unassigned"} />
+        <Detail label="Reviewer" value={data.assignedReviewerName ?? "Unassigned"} />
+        <Detail
+          label="Submitted"
+          value={data.submittedAt ? new Date(data.submittedAt).toLocaleDateString() : "Not submitted"}
+        />
+        <Detail label="Eligibility" value={data.eligibilityResult ?? "Pending"} />
+      </section>
+
+      <section className="card p-5 sm:p-6">
+        <h2 className="text-base font-semibold text-ink-900">Verification checks</h2>
+        {checks.isLoading ? (
+          <div className="mt-4">
+            <LoadingBlock label="Loading checks" />
+          </div>
+        ) : (checks.data ?? []).length === 0 ? (
+          <div className="mt-4">
+            <EmptyState title="No checks have been created for this case" />
+          </div>
+        ) : (
+          <ul className="mt-4 divide-y divide-ink-200">
+            {(checks.data ?? []).map((check) => (
+              <li key={check.id} className="flex flex-wrap items-start gap-3 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-ink-900">
+                    {check.label}
+                    {check.isMandatory ? (
+                      <span className="ml-2 text-xs font-normal text-ink-500">Required</span>
+                    ) : null}
+                  </p>
+                  {check.remarks ? (
+                    <p className="mt-0.5 text-sm text-ink-600">{check.remarks}</p>
+                  ) : null}
+                  {check.evidenceReference ? (
+                    <p className="mt-0.5 text-xs text-ink-500">
+                      Reference: {check.evidenceReference}
+                    </p>
+                  ) : null}
+                  {check.verifierName ? (
+                    <p className="mt-0.5 text-xs text-ink-500">Verified by {check.verifierName}</p>
+                  ) : null}
+                </div>
+                <StatusBadge
+                  tone={
+                    check.status === "VERIFIED"
+                      ? "success"
+                      : check.status === "DISCREPANCY_FOUND" || check.status === "REJECTED"
+                        ? "danger"
+                        : check.status === "CLARIFICATION_REQUIRED"
+                          ? "warning"
+                          : "neutral"
+                  }
+                >
+                  {check.status.replace(/_/g, " ").toLowerCase()}
+                </StatusBadge>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="card p-5 sm:p-6">
+        <h2 className="text-base font-semibold text-ink-900">Documents</h2>
+        {documents.isLoading ? (
+          <div className="mt-4">
+            <LoadingBlock label="Loading documents" />
+          </div>
+        ) : (documents.data ?? []).length === 0 ? (
+          <div className="mt-4">
+            <EmptyState title="No documents uploaded yet" />
+          </div>
+        ) : (
+          <ul className="mt-4 divide-y divide-ink-200">
+            {(documents.data ?? []).map((document) => (
+              <li key={document.id} className="flex flex-wrap items-center gap-3 py-3">
+                <FileText className="h-4 w-4 shrink-0 text-ink-400" aria-hidden="true" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-ink-900">{document.label}</p>
+                  <p className="text-xs text-ink-500">
+                    {document.currentVersion
+                      ? `${document.currentVersion.originalFilename} · v${document.versionCount}`
+                      : "Not uploaded"}
+                  </p>
+                </div>
+                <StatusBadge tone={document.status === "ACCEPTED" ? "success" : "info"}>
+                  {document.status.replace(/_/g, " ").toLowerCase()}
+                </StatusBadge>
+                {document.currentVersion ? (
+                  <a
+                    className="btn-secondary"
+                    href={`/api/documents/${document.id}/versions/${document.currentVersion.id}/download`}
+                    download
+                  >
+                    <Download className="h-4 w-4" aria-hidden="true" />
+                    Download
+                  </a>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="card p-5 sm:p-6">
+        <h2 className="text-base font-semibold text-ink-900">Request clarification</h2>
+        <p className="mt-1 text-sm text-ink-500">
+          Ask the candidate for a specific item. The request is recorded against the case and
+          the candidate is notified.
+        </p>
+        <ClarificationForm
+          onSubmit={(input) => clarify.mutate(input)}
+          pending={clarify.isPending}
+          error={
+            clarify.error instanceof ApiError
+              ? clarify.error.message
+              : clarify.isError
+                ? "The clarification request could not be created."
+                : null
+          }
+        />
+      </section>
+
+      <section className="card p-5 sm:p-6">
+        <h2 className="text-base font-semibold text-ink-900">Case history</h2>
+        {history.isLoading ? (
+          <div className="mt-4">
+            <LoadingBlock label="Loading history" />
+          </div>
+        ) : (
+          <ol className="mt-4 space-y-3 border-l border-ink-200 pl-4">
+            {(history.data ?? []).map((entry) => (
+              <li key={entry.id}>
+                <p className="text-sm font-medium text-ink-900">
+                  {entry.fromStatus ? `${entry.fromStatus} → ` : ""}
+                  {entry.toStatus.replace(/_/g, " ").toLowerCase()}
+                </p>
+                <p className="text-xs text-ink-500">
+                  {entry.actorName ?? "System"}
+                  {entry.actorRole ? ` (${entry.actorRole})` : ""} ·{" "}
+                  {new Date(entry.createdAt).toLocaleString()}
+                </p>
+                {entry.reason ? <p className="mt-0.5 text-sm text-ink-600">{entry.reason}</p> : null}
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="card p-4">
+      <p className="text-xs font-medium uppercase tracking-wide text-ink-500">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-ink-900">{value}</p>
+    </div>
+  );
+}
+
+function ClarificationForm({
+  onSubmit,
+  pending,
+  error,
+}: {
+  onSubmit: (input: { issueSummary: string; requiredAction: string }) => void;
+  pending: boolean;
+  error: string | null;
+}) {
+  const [issueSummary, setIssueSummary] = useState("");
+  const [requiredAction, setRequiredAction] = useState("");
+
+  return (
+    <form
+      className="mt-4 space-y-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit({ issueSummary, requiredAction });
+        setIssueSummary("");
+        setRequiredAction("");
+      }}
+    >
+      <div>
+        <label className="label" htmlFor="issueSummary">
+          Issue
+        </label>
+        <input
+          id="issueSummary"
+          className="input"
+          placeholder="Address proof is not legible"
+          value={issueSummary}
+          onChange={(event) => setIssueSummary(event.target.value)}
+          required
+        />
+      </div>
+      <div>
+        <label className="label" htmlFor="requiredAction">
+          Required action
+        </label>
+        <textarea
+          id="requiredAction"
+          className="input min-h-20"
+          placeholder="Upload a clearer scan of the utility bill showing the address and the last three months."
+          value={requiredAction}
+          onChange={(event) => setRequiredAction(event.target.value)}
+          required
+        />
+      </div>
+      {error ? (
+        <p className="error-text" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <button type="submit" className="btn-primary" disabled={pending}>
+        {pending ? "Sending…" : "Request clarification"}
+      </button>
+    </form>
+  );
+}

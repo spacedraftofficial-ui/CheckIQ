@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1792660148570,
+      "tag": "0000_polite_makkari",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1792660571981,
+      "tag": "0001_tiresome_banshee",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1792662576323,
+      "tag": "0002_quick_hex",
+      "breakpoints": true
+    }
+  ]
+}
