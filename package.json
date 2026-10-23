@@ -12,7 +12,7 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "npm run build -w @checkiq/contracts && npm run build -w @checkiq/api && npm run build -w @checkiq/web",
+    "build": "npm run build -w @checkiq/contracts && npm run build -w @checkiq/api && npm run build -w @checkiq/web && npm run db:migrate && npm run db:seed",
     "build:contracts": "npm run build -w @checkiq/contracts",
     "typecheck": "npm run typecheck -w @checkiq/contracts && npm run typecheck -w @checkiq/api && npm run typecheck -w @checkiq/web",
     "lint": "npm run lint -w @checkiq/api && npm run lint -w @checkiq/web",

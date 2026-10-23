@@ -31,6 +31,13 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: true,
+    // Merge all chunks into a single file to reduce memory allocation pressure
+    // on constrained hosting environments.
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      },
+    },
   },
   test: {
     environment: "jsdom",
