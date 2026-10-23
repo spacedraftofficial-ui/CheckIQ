@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { UserPlus } from "lucide-react";
-import { ApiError, request, requestPage } from "../../lib/api";
+import { UserPlus, Search } from "lucide-react";
+import { ApiError, request, requestPage, toQueryString } from "../../lib/api";
 import { EmptyState, ErrorState, InlineError, LoadingBlock, StatusBadge } from "../../components/States";
 
 interface AdminUser {
@@ -11,12 +11,13 @@ interface AdminUser {
   isActive: boolean;
   roles: string[];
   lastLoginAt: string | null;
+  createdAt: string;
 }
 
 const roleLabels: Record<string, string> = {
   CANDIDATE: "Candidate",
   BGV_EXECUTIVE: "BGV Executive",
-  BGV_REVIEWER: "BGV Reviewer",
+  BGV_REVIEWER: "BGV Reviewer / Manager",
   HR_RECRUITMENT: "HR / Recruitment",
   ADMINISTRATOR: "Administrator",
   SUPER_ADMINISTRATOR: "Super Administrator",
@@ -25,10 +26,19 @@ const roleLabels: Record<string, string> = {
 export function AdminUsersPage() {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const pageSize = 50;
+
+  const searchParams = useMemo(() => {
+    const params: Record<string, unknown> = { page: page.toString(), pageSize: pageSize.toString() };
+    if (search) params.search = search;
+    return params;
+  }, [page, search]);
 
   const users = useQuery({
-    queryKey: ["admin", "users"],
-    queryFn: () => requestPage<AdminUser>("/admin/users?pageSize=50"),
+    queryKey: ["admin", "users", page, search],
+    queryFn: () => requestPage<AdminUser>(`/admin/users${toQueryString(searchParams)}`),
   });
 
   const usersData = users.data;
@@ -42,7 +52,21 @@ export function AdminUsersPage() {
       await queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
     },
   });
+
+  const handleSearch = (event: React.FormEvent) => {
+    event.preventDefault();
+    setPage(1);
+  };
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(event.target.value);
+    setPage(1);
+  };
+
   if (!usersData) return <LoadingBlock label="Loading users" />;
+
+  const total = usersData.meta.total;
+  const totalPages = usersData.meta.totalPages;
 
   return (
     <div className="space-y-6">
@@ -54,10 +78,27 @@ export function AdminUsersPage() {
           </p>
         </div>
         <button type="button" className="btn-primary" onClick={() => setShowForm((value) => !value)}>
-          <UserPlus className="h-4 w-4" aria-hidden="true" />
+          <UserPlus className="h-4 w-4" aria-hidden={true} />
           {showForm ? "Cancel" : "Add a user"}
         </button>
       </header>
+
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <form className="relative max-w-md" onSubmit={handleSearch}>
+          <input
+            type="search"
+            placeholder="Search by name or email..."
+            className="input pl-10"
+            value={search}
+            onChange={handleSearchChange}
+            aria-label="Search users"
+          />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" aria-hidden={true} />
+        </form>
+        <p className="text-sm text-ink-600">
+          Showing {Math.min((page - 1) * pageSize + 1, total)}-{Math.min(page * pageSize, total)} of {total} users
+        </p>
+      </div>
 
       {showForm ? (
         <CreateUserForm
@@ -133,6 +174,32 @@ export function AdminUsersPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-ink-600">
+            Page {page} of {totalPages}
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
     </div>

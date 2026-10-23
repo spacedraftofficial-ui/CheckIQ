@@ -7,7 +7,7 @@ import { InlineError } from "../components/States";
 export function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [identifier, setIdentifier] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -17,7 +17,7 @@ export function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      const sessionUser = await login(identifier, password);
+      const sessionUser = await login(email, password);
       navigate(homeRouteFor(sessionUser), { replace: true });
     } catch (caught) {
       setError(
@@ -43,20 +43,21 @@ export function LoginPage() {
 
           <h1 className="mt-5 text-xl font-bold text-ink-900">Sign in</h1>
           <p className="mt-1 text-sm text-ink-500">
-            Use the email address or Candidate ID issued to you.
+            Enter your email address and password.
           </p>
 
           <form className="mt-6 space-y-4" onSubmit={handleSubmit} noValidate>
             <div>
-              <label className="label" htmlFor="identifier">
-                Email address or Candidate ID
+              <label className="label" htmlFor="email">
+                Email address
               </label>
               <input
-                id="identifier"
+                id="email"
+                type="email"
                 className="input"
                 autoComplete="username"
-                value={identifier}
-                onChange={(event) => setIdentifier(event.target.value)}
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
                 required
               />
             </div>

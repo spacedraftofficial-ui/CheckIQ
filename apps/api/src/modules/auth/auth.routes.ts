@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { z } from "zod";
 import {
   changePasswordRequestSchema,
   loginRequestSchema,
@@ -12,6 +13,7 @@ import { changePassword, login, logout, refresh, signup } from "./auth.service.j
 import { REFRESH_COOKIE_NAME } from "./auth.service.js";
 import { clearRefreshCookie, setRefreshCookie } from "./auth.cookie.js";
 import { buildSessionUser } from "./auth.service.js";
+import { verifyEmailToken, resendVerificationEmail } from "./email-verification.service.js";
 
 export const authRouter = Router();
 
@@ -27,7 +29,8 @@ function requestContext(req: { ipAddress?: string; userAgent?: string; requestId
  * POST /api/auth/signup
  *
  * Registers a candidate with an entered Candidate ID. No invitation, OTP or
- * pre-registered record is required.
+ * pre-registered record is required. The candidate must verify their email
+ * before they can sign in.
  */
 authRouter.post(
   "/signup",
@@ -35,8 +38,14 @@ authRouter.post(
   validate({ body: signupRequestSchema }),
   async (req, res) => {
     const result = await signup(req.body, requestContext(req));
-    setRefreshCookie(res, result.refreshToken);
-    res.status(201).json({ data: result.response });
+    res.status(201).json({
+      data: {
+        userId: result.userId,
+        email: result.email,
+        fullName: result.fullName,
+        requiresEmailVerification: result.requiresEmailVerification,
+      },
+    });
   },
 );
 
@@ -51,6 +60,45 @@ authRouter.post(
     const result = await login(req.body, requestContext(req));
     setRefreshCookie(res, result.refreshToken);
     res.status(200).json({ data: result.response });
+  },
+);
+
+/**
+ * POST /api/auth/verify-email
+ */
+const verifyEmailSchema = z.object({
+  token: z.string().min(1, "Verification token is required"),
+});
+
+authRouter.post(
+  "/verify-email",
+  validate({ body: verifyEmailSchema }),
+  async (req, res) => {
+    const result = await verifyEmailToken(req.body.token);
+    if (result.success) {
+      res.status(200).json({ data: { verified: true, message: result.message } });
+    } else {
+      res.status(400).json({
+        error: { code: "EMAIL_VERIFICATION_FAILED", message: result.message },
+      });
+    }
+  },
+);
+
+/**
+ * POST /api/auth/resend-verification
+ */
+const resendVerificationSchema = z.object({
+  email: z.email("Enter a valid email address"),
+});
+
+authRouter.post(
+  "/resend-verification",
+  signupRateLimit,
+  validate({ body: resendVerificationSchema }),
+  async (req, res) => {
+    const result = await resendVerificationEmail(req.body.email);
+    res.status(200).json({ data: { sent: result.sent, message: result.message } });
   },
 );
 

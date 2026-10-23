@@ -1,7 +1,6 @@
 import { hash, verify } from "@node-rs/argon2";
 import type { AuthResponse, LoginRequest, SessionUser, SignupRequest } from "@checkiq/contracts";
 import { and, eq, inArray, isNull } from "drizzle-orm";
-import { getConfig } from "../../config.js";
 import { getDatabase, schema } from "../../db/client.js";
 
 import type { Tx } from "../../db/types.js";
@@ -11,8 +10,10 @@ import { sha256 } from "../../lib/crypto.js";
 import { createCaseForProfile } from "../../services/case.service.js";
 import { recordAudit } from "../../services/audit.service.js";
 import { queueNotification } from "../../services/notification.service.js";
-import { getPatternConfig, getStringConfig } from "../../services/config.service.js";
+import { getBooleanConfig, getPatternConfig, getStringConfig } from "../../services/config.service.js";
 import { issueAccessToken } from "./tokens.js";
+import { getLogger } from "../../lib/logger.js";
+import { getConfig } from "../../config.js";
 
 /**
  * Authentication service.
@@ -149,7 +150,14 @@ async function issueSession(
  * already be in use. A duplicate is reported explicitly — accounts and cases
  * are never silently merged or overwritten.
  */
-export async function signup(input: SignupRequest, context: RequestContext): Promise<AuthResult> {
+export interface SignupResult {
+  userId: string;
+  email: string;
+  fullName: string;
+  requiresEmailVerification: boolean;
+}
+
+export async function signup(input: SignupRequest, context: RequestContext): Promise<SignupResult> {
   const { db } = getDatabase();
 
   if (input.password !== input.confirmPassword) {
@@ -211,7 +219,7 @@ export async function signup(input: SignupRequest, context: RequestContext): Pro
   const userId = newId();
   let createdCaseId = "";
 
-  const session = await db.transaction(async (tx) => {
+  await db.transaction(async (tx) => {
     await tx.insert(schema.users).values({
       id: userId,
       email: input.email.trim(),
@@ -297,16 +305,8 @@ export async function signup(input: SignupRequest, context: RequestContext): Pro
       },
       tx,
     );
-
-    return issueSession(
-        tx,
-        { id: userId, email: input.email.trim(), fullName: input.fullName.trim(), sessionEpoch: 1 },
-        ["CANDIDATE"],
-        context,
-      );
   });
 
-  const user = await buildSessionUser(userId);
   await queueNotification({
     event: "ACCOUNT_CREATED",
     recipientUserId: userId,
@@ -319,13 +319,32 @@ export async function signup(input: SignupRequest, context: RequestContext): Pro
       caseNumber: "",
     },
   });
+
+  // Send email verification
+  const verificationEnabled = await getBooleanConfig("email_verification.enabled", true);
+  if (verificationEnabled) {
+    try {
+      const { sendVerificationEmail } = await import("./email-verification.service.js");
+      await sendVerificationEmail({
+        userId,
+        email: input.email.trim(),
+        fullName: input.fullName.trim(),
+        candidateId: normalisedCandidateId,
+      });
+    } catch (emailErr) {
+      getLogger().warn({ userId, err: emailErr }, "Failed to send verification email");
+    }
+  }
+
   return {
-    response: { user, accessToken: session.accessToken, expiresInSeconds: session.expiresInSeconds },
-    refreshToken: session.refreshToken,
+    userId,
+    email: input.email.trim(),
+    fullName: input.fullName.trim(),
+    requiresEmailVerification: verificationEnabled,
   };
 }
 
-/** Signs a user in with an email address or a Candidate ID. */
+/** Signs a user in with an email address. */
 export async function login(input: LoginRequest, context: RequestContext): Promise<AuthResult> {
   const { db } = getDatabase();
   const identifier = input.identifier.trim().toLowerCase();
@@ -336,38 +355,19 @@ export async function login(input: LoginRequest, context: RequestContext): Promi
     .where(eq(schema.users.emailNormalized, identifier))
     .limit(1);
 
-  let resolvedUser = userByEmail;
+  const resolvedUser = userByEmail;
   if (!resolvedUser) {
-    const [profile] = await db
-      .select({ userId: schema.candidateProfiles.userId })
-      .from(schema.candidateProfiles)
-      .where(eq(schema.candidateProfiles.candidateId, input.identifier.trim()))
-      .limit(1);
-    if (profile) {
-      const [byId] = await db
-        .select()
-        .from(schema.users)
-        .where(eq(schema.users.id, profile.userId))
-        .limit(1);
-      resolvedUser = byId;
-    }
-  }
-
-  const genericFailure = unauthenticated("The email address, Candidate ID or password is incorrect");
-
-  if (!resolvedUser) {
-    // Spend a comparable amount of time so that a missing account is not
-    // measurably faster than a wrong password.
+    // No candidate ID lookup - email only for sign-in
     await hash("invalid-placeholder-password", ARGON2_OPTIONS).catch(() => "");
     await recordAudit({
       action: "AUTH_LOGIN_FAILED",
       entityType: "user",
-      reason: "No account matched the supplied identifier",
+      reason: "No account matched the supplied email",
       ipAddress: context.ipAddress ?? null,
       userAgent: context.userAgent ?? null,
       requestId: context.requestId ?? null,
     });
-    throw genericFailure;
+    throw unauthenticated("The email address or password is incorrect");
   }
 
   if (!resolvedUser.isActive) {
@@ -400,7 +400,7 @@ export async function login(input: LoginRequest, context: RequestContext): Promi
       userAgent: context.userAgent ?? null,
       requestId: context.requestId ?? null,
     });
-    throw genericFailure;
+     throw unauthenticated("The email address or password is incorrect");
   }
 
   const roleRows = await db
@@ -408,6 +408,28 @@ export async function login(input: LoginRequest, context: RequestContext): Promi
     .from(schema.userRoles)
     .where(and(eq(schema.userRoles.userId, resolvedUser.id), isNull(schema.userRoles.revokedAt)));
   const roles = roleRows.map((row) => row.code);
+
+  // Check email verification - staff/admin accounts are exempt
+  const verificationEnabled = await getBooleanConfig("email_verification.enabled", true);
+  if (verificationEnabled) {
+    const isAdmin = roles.some((r) => r === "ADMINISTRATOR" || r === "SUPER_ADMINISTRATOR");
+    if (!isAdmin && !resolvedUser.isEmailVerified) {
+      await recordAudit({
+        action: "AUTH_LOGIN_FAILED",
+        actorId: resolvedUser.id,
+        actorName: resolvedUser.fullName,
+        entityType: "user",
+        entityId: resolvedUser.id,
+        reason: "Email not verified",
+        ipAddress: context.ipAddress ?? null,
+        userAgent: context.userAgent ?? null,
+        requestId: context.requestId ?? null,
+      });
+      throw unauthenticated(
+        "Please verify your email address before signing in. Check your inbox for a verification link or request a new one.",
+      );
+    }
+  }
 
   const session = await db.transaction(async (tx) => {
     await tx

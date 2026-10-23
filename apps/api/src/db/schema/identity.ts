@@ -24,6 +24,7 @@ export const users = mysqlTable(
     fullName: varchar("full_name", { length: 160 }).notNull(),
     mobile: varchar("mobile", { length: 32 }).notNull(),
     isActive: boolean("is_active").notNull().default(true),
+    isEmailVerified: boolean("is_email_verified").notNull().default(false),
     mustChangePassword: boolean("must_change_password").notNull().default(false),
     /**
      * Incremented when the account is deactivated or credentials change.
@@ -116,5 +117,22 @@ export const authSessions = mysqlTable(
     index("ix_auth_sessions_user").on(t.userId),
     index("ix_auth_sessions_family").on(t.familyId),
     index("ix_auth_sessions_expires").on(t.expiresAt),
+  ],
+);
+
+export const emailVerificationTokens = mysqlTable(
+  "email_verification_tokens",
+  {
+    id: varchar("id", { length: 36 }).primaryKey(),
+    userId: varchar("user_id", { length: 36 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: varchar("token_hash", { length: 64 }).notNull(),
+    expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
+    createdAt: timestamp("created_at", { mode: "date", fsp: 3 }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("uq_email_verification_tokens_hash").on(t.tokenHash),
+    index("ix_email_verification_tokens_user").on(t.userId),
   ],
 );

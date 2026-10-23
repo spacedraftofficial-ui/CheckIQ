@@ -51,6 +51,8 @@ const envSchema = z.object({
   COOKIE_DOMAIN: z.string().optional(),
 
   EMAIL_ENABLED: booleanFromString.default(false),
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().default("CheckIQ <no-reply@checkiq.org>"),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
   SMTP_SECURE: booleanFromString.default(false),
@@ -68,6 +70,7 @@ const envSchema = z.object({
   SEED_ADMIN_EMAIL: z.string().default("admin@checkiq.local"),
   SEED_ADMIN_PASSWORD: z.string().default("ChangeMe!2026"),
   SEED_ADMIN_NAME: z.string().default("System Administrator"),
+  EMAIL_VERIFICATION_TTL_MINUTES: z.coerce.number().int().min(1).max(1440).default(1440),
 });
 
 export type AppConfig = z.infer<typeof envSchema>;

@@ -138,7 +138,7 @@ export async function queueNotification(input: QueueNotificationInput): Promise<
       continue;
     }
 
-    const result = await sendEmail({ to: input.recipientEmail, subject, body });
+    const result = await sendEmail({ to: input.recipientEmail, subject, html: body });
     await db
       .update(schema.notifications)
       .set({
@@ -238,7 +238,7 @@ export async function retryFailedNotifications(limit = 50): Promise<number> {
     const result = await sendEmail({
       to: recipient.email,
       subject: notification.subject,
-      body: notification.body,
+      html: notification.body,
     });
     await db
       .update(schema.notifications)

@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ApiError } from "../lib/api";
+import { ApiError, request } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { InlineError } from "../components/States";
 
@@ -40,9 +40,29 @@ type SignupForm = z.infer<typeof signupSchema>;
 
 export function SignupPage() {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const { signup } = useAuth();
   const [duplicateMessage, setDuplicateMessage] = useState<string | null>(null);
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [emailForVerification, setEmailForVerification] = useState("");
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
+
+  const resendVerification = async () => {
+    setResending(true);
+    setResendMessage(null);
+    try {
+      await request("/auth/resend-verification", {
+        method: "POST",
+        body: { email: emailForVerification },
+        auth: false,
+      });
+      setResendMessage("A new verification email has been sent.");
+    } catch {
+      setResendMessage("Could not send verification email. Please try again later.");
+    } finally {
+      setResending(false);
+    }
+  };
 
   const {
     register,
@@ -60,9 +80,11 @@ export function SignupPage() {
 
   const onSubmit = handleSubmit(async (values) => {
     setDuplicateMessage(null);
+    setVerificationSent(false);
     try {
       await signup(values);
-      navigate("/dashboard", { replace: true });
+      setEmailForVerification(values.email);
+      setVerificationSent(true);
     } catch (error) {
       if (error instanceof ApiError && error.code === "CANDIDATE_ID_ALREADY_IN_USE") {
         setDuplicateMessage(error.message);
@@ -220,12 +242,46 @@ export function SignupPage() {
             </button>
           </form>
 
-          <p className="mt-6 text-sm text-ink-600">
-            Already registered?{" "}
-            <Link to="/login" className="font-semibold text-brand-700 underline">
-              Sign in
-            </Link>
-          </p>
+          {verificationSent ? (
+            <div
+              className="mt-6 rounded-lg border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-900"
+              role="status"
+            >
+              <p className="font-semibold">Check your email</p>
+              <p className="mt-1">
+                A verification link has been sent to your inbox. Click the link to verify your
+                email address before signing in.
+              </p>
+              {resendMessage ? (
+                <p className={`mt-2 ${resendMessage.includes("sent") ? "text-emerald-700" : "text-amber-700"}`}>
+                  {resendMessage}
+                </p>
+              ) : null}
+              <button
+                type="button"
+                className="btn-secondary mt-2"
+                disabled={resending}
+                onClick={resendVerification}
+              >
+                {resending ? "Resending…" : "Resend verification email"}
+              </button>
+            </div>
+          ) : null}
+
+          {!verificationSent ? (
+            <p className="mt-6 text-sm text-ink-600">
+              Already registered?{" "}
+              <Link to="/login" className="font-semibold text-brand-700 underline">
+                Sign in
+              </Link>
+            </p>
+          ) : (
+            <p className="mt-6 text-sm text-ink-600">
+              <Link to="/login" className="font-semibold text-brand-700 underline">
+                Back to sign in
+              </Link>
+            </p>
+          )}
         </div>
       </div>
     </div>

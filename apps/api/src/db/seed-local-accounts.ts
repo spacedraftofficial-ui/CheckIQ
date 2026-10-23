@@ -90,15 +90,16 @@ async function createAccount(db: Db, account: LocalAccount, passwordHash: string
   }
 
   const userId = newId();
-  await db.insert(schema.users).values({
-    id: userId,
-    email: account.email,
-    emailNormalized,
-    passwordHash,
-    fullName: account.fullName,
-    mobile: "+919812345678",
-    mustChangePassword: false,
-  });
+   await db.insert(schema.users).values({
+     id: userId,
+     email: account.email,
+     emailNormalized,
+     passwordHash,
+     fullName: account.fullName,
+     mobile: "+919812345678",
+     isEmailVerified: true,
+     mustChangePassword: false,
+   });
 
   await db.insert(schema.userRoles).values(
     account.roles.map((role) => ({ userId, roleCode: role, assignedBy: null })),

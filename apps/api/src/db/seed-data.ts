@@ -273,6 +273,9 @@ export const SYSTEM_CONFIG_SEED = [
   { key: "retention.documents.months", value: "", valueType: "STRING", category: "RETENTION", description: "Retention period for documents. Deliberately unset — policy decision D-03." },
   { key: "retention.audit.months", value: "", valueType: "STRING", category: "RETENTION", description: "Retention period for audit events. Deliberately unset — policy decision D-03." },
   { key: "support.contact_email", value: "", valueType: "STRING", category: "GENERAL", description: "Address shown to candidates when recovering a duplicate Candidate ID." },
+  { key: "email_verification.enabled", value: "true", valueType: "BOOLEAN", category: "AUTHENTICATION", description: "When true, candidates must verify their email before signing in." },
+  { key: "email_verification.token_ttl_minutes", value: "1440", valueType: "NUMBER", category: "AUTHENTICATION", description: "How long an email verification token is valid (minutes)." },
+  { key: "auth.admin_requires_verification", value: "false", valueType: "BOOLEAN", category: "AUTHENTICATION", description: "When false, admin/staff accounts skip email verification." },
 ] as const;
 
 export const NOTIFICATION_TEMPLATE_SEED = [

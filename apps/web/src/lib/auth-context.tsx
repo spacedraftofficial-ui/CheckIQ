@@ -84,10 +84,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [applySession, clearSession, fetchSession]);
 
   const login = useCallback(
-    async (identifier: string, password: string): Promise<SessionUser> => {
+    async (email: string, password: string): Promise<SessionUser> => {
       const session = await request<AuthResponse>("/auth/login", {
         method: "POST",
-        body: { identifier, password },
+        body: { identifier: email, password },
         auth: false,
       });
       applySession(session);
@@ -98,14 +98,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signup = useCallback(
     async (input: SignupInput) => {
-      const session = await request<AuthResponse>("/auth/signup", {
-        method: "POST",
-        body: input,
-        auth: false,
-      });
-      applySession(session);
+      const result = await request<{ userId?: string; email: string; fullName: string; requiresEmailVerification: boolean }>(
+        "/auth/signup",
+        {
+          method: "POST",
+          body: input,
+          auth: false,
+        },
+      );
+      if (result.requiresEmailVerification) {
+        // User needs to verify email before they can log in
+        setAccessToken(null);
+        setUser(null);
+        setStatus("anonymous");
+      } else {
+        // No verification needed, sign in directly (not expected for candidates)
+        setAccessToken(null);
+        setUser(null);
+        setStatus("anonymous");
+      }
     },
-    [applySession],
+    [],
   );
 
   const logout = useCallback(async () => {

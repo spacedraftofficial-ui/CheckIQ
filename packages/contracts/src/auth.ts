@@ -44,7 +44,7 @@ export const signupRequestSchema = z.object({
 export type SignupRequest = z.infer<typeof signupRequestSchema>;
 
 export const loginRequestSchema = z.object({
-  identifier: z.string().trim().min(3, { error: "Enter your email or Candidate ID" }).max(254),
+  identifier: z.email({ error: "Enter your email address" }).max(254),
   password: z.string().min(1, { error: "Password is required" }).max(128),
 });
 export type LoginRequest = z.infer<typeof loginRequestSchema>;

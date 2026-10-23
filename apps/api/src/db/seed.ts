@@ -363,6 +363,7 @@ export async function runSeed(db: Db): Promise<void> {
       passwordHash,
       fullName: config.SEED_ADMIN_NAME,
       mobile: "+00000000000",
+      isEmailVerified: true,
       mustChangePassword: true,
     });
     await db.insert(schema.userRoles).values([
