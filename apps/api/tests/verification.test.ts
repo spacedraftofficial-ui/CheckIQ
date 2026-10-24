@@ -7,6 +7,7 @@ import {
   createStaff,
   resetDatabase,
   uploadMandatoryDocuments,
+  uniqueCandidateId,
 } from "./helpers.js";
 
 /**
@@ -363,5 +364,52 @@ describe("verification", () => {
     });
 
     expect(response.status).toBe(403);
+  });
+
+  it("allows an administrator to manually verify a candidate's email", async () => {
+    const admin = await createStaff(["ADMINISTRATOR"]);
+    const { getDatabase, schema } = await import("../src/db/client.js");
+
+    // Create an unverified candidate by directly inserting into the database
+    const { hash } = await import("@node-rs/argon2");
+    const passwordHash = await hash("Str0ng!Passw0rd");
+    const userId = crypto.randomUUID();
+    const candidateId = uniqueCandidateId();
+    const email = `${candidateId.toLowerCase()}@example.test`;
+    const { db } = getDatabase();
+
+    await db.insert(schema.users).values({
+      id: userId,
+      email,
+      emailNormalized: email.toLowerCase(),
+      passwordHash,
+      fullName: "Unverified User",
+      mobile: "+919876543210",
+      isEmailVerified: false,
+    });
+    await db.insert(schema.userRoles).values({
+      userId,
+      roleCode: "CANDIDATE",
+      assignedBy: null,
+    });
+
+    // Verify the user's email via the admin endpoint
+    const response = await api({
+      method: "post",
+      path: `/api/admin/users/${userId}/verify-email`,
+      token: admin.token,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.emailVerified).toBe(true);
+
+    // Log in should now succeed
+    const login = await api({
+      method: "post",
+      path: "/api/auth/login",
+      body: { identifier: email, password: "Str0ng!Passw0rd" },
+    });
+
+    expect(login.status).toBe(200);
   });
 });

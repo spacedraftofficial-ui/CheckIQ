@@ -81,6 +81,7 @@ adminRouter.get(
         email: schema.users.email,
         fullName: schema.users.fullName,
         isActive: schema.users.isActive,
+        isEmailVerified: schema.users.isEmailVerified,
         lastLoginAt: schema.users.lastLoginAt,
         createdAt: schema.users.createdAt,
       })
@@ -102,6 +103,7 @@ adminRouter.get(
         email: row.email,
         fullName: row.fullName,
         isActive: row.isActive,
+        isEmailVerified: row.isEmailVerified,
         roles: roleRows
           .filter((role) => role.userId === row.id)
           .map((role) => role.code as (typeof USER_ROLES)[number]),
@@ -300,6 +302,62 @@ adminRouter.patch(
     });
 
     res.status(200).json({ data: { id: existing.id, updated: true } });
+  },
+);
+
+/**
+ * POST /api/admin/users/:id/verify-email
+ *
+ * Manually verifies a user's email address. Useful when the user did not
+ * receive the verification email or when an admin needs to confirm an account
+ * on behalf of the candidate.
+ */
+adminRouter.post(
+  "/admin/users/:id/verify-email",
+  requirePrincipal,
+  requirePermission("user:manage"),
+  validate({ params: idParam }),
+  async (req, res) => {
+    const { db } = getDatabase();
+    const userId = param(req, "id");
+    const [user] = await db
+      .select({ id: schema.users.id, email: schema.users.email, fullName: schema.users.fullName, isEmailVerified: schema.users.isEmailVerified })
+      .from(schema.users)
+      .where(eq(schema.users.id, userId))
+      .limit(1);
+    if (!user) throw notFound("User not found");
+
+    await db
+      .update(schema.users)
+      .set({ isEmailVerified: true })
+      .where(eq(schema.users.id, user.id));
+
+    await recordAudit({
+      action: "USER_EMAIL_VERIFIED",
+      actorId: req.principal!.userId,
+      actorName: req.principal!.fullName,
+      actorRole: req.principal!.roles[0] ?? null,
+      entityType: "user",
+      entityId: user.id,
+      reason: `Email manually verified by administrator. Previous value was ${user.isEmailVerified ? "true" : "false"}.`,
+      ipAddress: req.ipAddress ?? null,
+      userAgent: req.userAgent ?? null,
+      requestId: req.requestId,
+    });
+
+    // Also send a notification to the user via in-app notification
+    await queueNotification({
+      event: "ADMIN_NOTICE",
+      recipientUserId: user.id,
+      recipientEmail: user.email,
+      deduplicationKey: `email-verified-${user.id}-${Date.now()}`,
+      variables: {
+        candidateName: user.fullName,
+        reason: "An administrator has verified your email address. You can now sign in.",
+      },
+    });
+
+    res.status(200).json({ data: { id: user.id, emailVerified: true } });
   },
 );
 

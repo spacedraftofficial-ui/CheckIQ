@@ -9,6 +9,7 @@ interface AdminUser {
   email: string;
   fullName: string;
   isActive: boolean;
+  isEmailVerified: boolean;
   roles: string[];
   lastLoginAt: string | null;
   createdAt: string;
@@ -50,6 +51,19 @@ export function AdminUsersPage() {
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+    },
+  });
+
+  const verifyEmail = useMutation({
+    mutationFn: ({ id }: { id: string }) =>
+      request(`/admin/users/${id}/verify-email`, {
+        method: "POST",
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+    },
+    onError: (caught) => {
+      console.error("Failed to verify email:", caught);
     },
   });
 
@@ -123,56 +137,72 @@ export function AdminUsersPage() {
         <div className="card overflow-x-auto">
           <table className="w-full min-w-[48rem] text-left text-sm">
             <caption className="sr-only">Platform users</caption>
-            <thead className="border-b border-ink-200 bg-ink-50 text-xs uppercase tracking-wide text-ink-500">
-              <tr>
-                <th scope="col" className="px-4 py-3">Name</th>
-                <th scope="col" className="px-4 py-3">Email</th>
-                <th scope="col" className="px-4 py-3">Roles</th>
-                <th scope="col" className="px-4 py-3">Status</th>
-                <th scope="col" className="px-4 py-3">Last sign-in</th>
-                <th scope="col" className="px-4 py-3">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-ink-200">
-              {usersData.data.map((user) => (
-                <tr key={user.id}>
-                  <td className="px-4 py-3 font-medium text-ink-900">{user.fullName}</td>
-                  <td className="px-4 py-3 text-ink-700">{user.email}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {user.roles.map((role) => (
-                        <StatusBadge key={role} tone="info">
-                          {roleLabels[role] ?? role}
-                        </StatusBadge>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge tone={user.isActive ? "success" : "danger"}>
-                      {user.isActive ? "Active" : "Disabled"}
-                    </StatusBadge>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-ink-500">
-                    {user.lastLoginAt
-                      ? new Date(user.lastLoginAt).toLocaleString(undefined, {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        })
-                      : "Never"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      disabled={deactivate.isPending}
-                      onClick={() => deactivate.mutate({ id: user.id, isActive: !user.isActive })}
-                    >
-                      {user.isActive ? "Disable" : "Enable"}
-                    </button>
-                  </td>
+              <thead className="border-b border-ink-200 bg-ink-50 text-xs uppercase tracking-wide text-ink-500">
+                <tr>
+                  <th scope="col" className="px-4 py-3">Name</th>
+                  <th scope="col" className="px-4 py-3">Email</th>
+                  <th scope="col" className="px-4 py-3">Roles</th>
+                  <th scope="col" className="px-4 py-3">Email</th>
+                  <th scope="col" className="px-4 py-3">Status</th>
+                  <th scope="col" className="px-4 py-3">Last sign-in</th>
+                  <th scope="col" className="px-4 py-3">Action</th>
                 </tr>
-              ))}
-            </tbody>
+              </thead>
+              <tbody className="divide-y divide-ink-200">
+                {usersData.data.map((user) => (
+                  <tr key={user.id}>
+                    <td className="px-4 py-3 font-medium text-ink-900">{user.fullName}</td>
+                    <td className="px-4 py-3 text-ink-700">{user.email}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {user.roles.map((role) => (
+                          <StatusBadge key={role} tone="info">
+                            {roleLabels[role] ?? role}
+                          </StatusBadge>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusBadge tone={user.isEmailVerified ? "success" : "warning"}>
+                        {user.isEmailVerified ? "Verified" : "Unverified"}
+                      </StatusBadge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusBadge tone={user.isActive ? "success" : "danger"}>
+                        {user.isActive ? "Active" : "Disabled"}
+                      </StatusBadge>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-ink-500">
+                      {user.lastLoginAt
+                        ? new Date(user.lastLoginAt).toLocaleString(undefined, {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })
+                        : "Never"}
+                    </td>
+                    <td className="px-4 py-3 space-y-1">
+                      {!user.isEmailVerified && (
+                        <button
+                          type="button"
+                          className="btn-secondary w-full"
+                          disabled={verifyEmail.isPending}
+                          onClick={() => verifyEmail.mutate({ id: user.id })}
+                        >
+                          {verifyEmail.isPending ? "Verifying…" : "Verify email"}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="btn-secondary w-full"
+                        disabled={deactivate.isPending}
+                        onClick={() => deactivate.mutate({ id: user.id, isActive: !user.isActive })}
+                      >
+                        {user.isActive ? "Disable" : "Enable"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
           </table>
         </div>
       )}
