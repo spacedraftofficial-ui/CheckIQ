@@ -200,15 +200,22 @@ export async function runSeed(db: Db): Promise<void> {
       .onDuplicateKeyUpdate({ set: { fieldKey } });
   }
 
+  const existingRequirements = await db
+    .select({ id: schema.documentRequirements.id, documentTypeId: schema.documentRequirements.documentTypeId })
+    .from(schema.documentRequirements)
+    .where(eq(schema.documentRequirements.packageId, resolvedPackageId));
+
   for (const requirement of STANDARD_PACKAGE_SEED.requirements) {
-    const id = uuid();
+    const documentTypeId = typeIds.get(requirement.documentTypeCode)!;
+    const existingReq = existingRequirements.find((r) => r.documentTypeId === documentTypeId);
+    const reqId = existingReq?.id ?? uuid();
     await db
       .insert(schema.documentRequirements)
       .values({
-        id,
+        id: reqId,
         packageId: resolvedPackageId,
         categoryId: categoryIds.get(requirement.categoryCode)!,
-        documentTypeId: typeIds.get(requirement.documentTypeCode)!,
+        documentTypeId,
         label: requirement.label,
         isMandatory: requirement.isMandatory,
         displayOrder: requirement.displayOrder,

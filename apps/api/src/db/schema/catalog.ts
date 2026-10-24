@@ -126,6 +126,7 @@ export const documentRequirements = mysqlTable(
   (t) => [
     index("ix_document_requirements_package").on(t.packageId),
     index("ix_document_requirements_type").on(t.documentTypeId),
+    uniqueIndex("uq_document_requirements_package_type").on(t.packageId, t.documentTypeId),
   ],
 );
 

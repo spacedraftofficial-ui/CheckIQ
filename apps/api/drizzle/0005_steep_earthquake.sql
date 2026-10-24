@@ -1,0 +1,1 @@
+ALTER TABLE `document_requirements` ADD CONSTRAINT `uq_document_requirements_package_type` UNIQUE(`package_id`,`document_type_id`);

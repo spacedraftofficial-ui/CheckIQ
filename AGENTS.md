@@ -116,3 +116,18 @@ npm run typecheck && npm run lint && npm test
 
 And update `docs/` if the change affects a contract, a state transition, a
 permission or a documented decision.
+
+## Seed idempotency
+
+The seed script (`apps/api/src/db/seed.ts`) is designed to be idempotent — running
+it repeatedly does not create duplicate rows. Tables with a natural composite
+primary key (e.g. `bgv_package_checks`, `bgv_package_profile_fields`) use
+`onDuplicateKeyUpdate` directly. For tables that only have a `varchar` primary key
+with no natural uniqueness constraint (`document_requirements`), the seed first
+queries for existing rows by their business key (`packageId` + `documentTypeId`)
+and reuses the existing `id` instead of generating a new UUID. This prevents
+duplicate document requirements from accumulating across seed runs.
+
+The `document_requirements` table also has a unique index on
+`(package_id, document_type_id)` (added in migration `0005_steep_earthquake`)
+as a database-level guard against duplicates.

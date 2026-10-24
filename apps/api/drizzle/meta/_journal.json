@@ -29,6 +29,13 @@
       "when": 1792662600000,
       "tag": "0003_email_verification",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1792827015735,
+      "tag": "0005_steep_earthquake",
+      "breakpoints": true
     }
   ]
 }
