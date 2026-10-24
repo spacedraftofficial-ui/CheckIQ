@@ -102,8 +102,11 @@ allowing a single Node.js process to serve both the API and the static frontend:
 
 For Hostinger single-site deployment:
 - Root: `./`
-- Build command: `npm run build -w @checkiq/contracts && npm run build -w @checkiq/api && npm run build -w @checkiq/web`
-- Entry file: `dist/index.js` (relative to `apps/api`)
+- Build command: `npm run build`
+- Entry file: `apps/api/dist/index.js`
+- Application type: Express
+- Node.js version: 22
+- Environment variables must be set in Hostinger hPanel (do NOT commit `.env` with secrets)
 
 ## Before saying a feature is done
 
