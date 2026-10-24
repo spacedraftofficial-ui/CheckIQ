@@ -13,6 +13,7 @@ import { ConsentPage } from "./pages/candidate/ConsentPage";
 import { SubmitPage } from "./pages/candidate/SubmitPage";
 import { ClarificationsPage } from "./pages/candidate/ClarificationsPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
+import { VerifyEmailPage } from "./pages/VerifyEmailPage";
 import { OpsDashboard } from "./pages/ops/OpsDashboard";
 import { CaseDetailPage } from "./pages/ops/CaseDetailPage";
 import { ReportPage } from "./pages/ops/ReportPage";
@@ -88,6 +89,7 @@ export function App() {
           </RequireAnonymous>
         }
       />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
 
       <Route
         element={
