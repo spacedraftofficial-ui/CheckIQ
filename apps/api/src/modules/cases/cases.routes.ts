@@ -18,6 +18,29 @@ import { CANDIDATE_VISIBLE_STATUSES } from "./case-state.js";
 
 export const casesRouter = Router();
 
+async function countRequiredProfileFields(packageId: string): Promise<number> {
+  const { db } = getDatabase();
+  const rows = await db
+    .select({ fieldKey: schema.bgvPackageProfileFields.fieldKey })
+    .from(schema.bgvPackageProfileFields)
+    .where(eq(schema.bgvPackageProfileFields.packageId, packageId));
+  return rows.length;
+}
+
+async function countRequiredDocuments(packageId: string): Promise<number> {
+  const { db } = getDatabase();
+  const rows = await db
+    .select({ id: schema.documentRequirements.id })
+    .from(schema.documentRequirements)
+    .where(
+      and(
+        eq(schema.documentRequirements.packageId, packageId),
+        eq(schema.documentRequirements.isMandatory, true),
+      ),
+    );
+  return rows.length;
+}
+
 const caseParams = z.object({ caseId: z.string().uuid() });
 const assignBody = z.object({
   verifierId: z.string().uuid().optional(),
@@ -376,6 +399,11 @@ casesRouter.get(
       req.principal!.permissions.has("score:read" as never) ||
       req.principal!.permissions.has("case:read:any" as never);
 
+    const readiness = await evaluateReadiness(caseRow.id);
+
+    const totalProfileFields = await countRequiredProfileFields(caseRow.packageId);
+    const totalDocuments = await countRequiredDocuments(caseRow.packageId);
+
     res.status(200).json({
       data: {
         id: caseRow.id,
@@ -403,7 +431,22 @@ casesRouter.get(
         score: canSeeScore && caseRow.score !== null ? Number(caseRow.score) : null,
         scoreOutcome: canSeeScore ? caseRow.scoreOutcome : null,
         eligibilityResult: canSeeScore ? caseRow.eligibilityResult : null,
-        openClarificationCount: 0,
+        openClarificationCount: readiness.missing.openClarifications.length,
+        profileCompletion: {
+          completed: totalProfileFields - readiness.missing.profileFields.length,
+          total: totalProfileFields,
+          percentage: totalProfileFields > 0
+            ? Math.round(((totalProfileFields - readiness.missing.profileFields.length) / totalProfileFields) * 100)
+            : 0,
+        },
+        documentCompletion: {
+          completed: totalDocuments - readiness.missing.documents.length,
+          total: totalDocuments,
+          percentage: totalDocuments > 0
+            ? Math.round(((totalDocuments - readiness.missing.documents.length) / totalDocuments) * 100)
+            : 0,
+        },
+        submissionReady: readiness.ready,
         createdAt: caseRow.createdAt.toISOString(),
         updatedAt: caseRow.updatedAt.toISOString(),
         version: caseRow.version,

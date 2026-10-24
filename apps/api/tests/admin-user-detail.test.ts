@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { api, createStaff, createCandidate, createCandidateWithoutCase, resetDatabase } from "./helpers.js";
+import { api, createStaff, createCandidate, createCandidateWithoutCase } from "./helpers.js";
 
 /**
  * Admin user-detail endpoint tests.

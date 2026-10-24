@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ApiError, request } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
+import type { SignupResponse } from "../lib/auth-context";
 import { InlineError } from "../components/States";
 import { AuthLayout } from "../components/Footer";
 
@@ -40,6 +41,7 @@ const signupSchema = z
 type SignupForm = z.infer<typeof signupSchema>;
 
 export function SignupPage() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { signup } = useAuth();
   const [duplicateMessage, setDuplicateMessage] = useState<string | null>(null);
@@ -83,9 +85,12 @@ export function SignupPage() {
     setDuplicateMessage(null);
     setVerificationSent(false);
     try {
-      await signup(values);
+      const response: SignupResponse | null = await signup(values);
       setEmailForVerification(values.email);
-      setVerificationSent(true);
+      if (response?.verificationCode) {
+        sessionStorage.setItem("dev_verify_otp", response.verificationCode);
+      }
+      navigate("/verify-email", { replace: true });
     } catch (error) {
       if (error instanceof ApiError && error.code === "CANDIDATE_ID_ALREADY_IN_USE") {
         setDuplicateMessage(error.message);
@@ -249,10 +254,10 @@ export function SignupPage() {
               role="status"
             >
               <p className="font-semibold">Check your email</p>
-              <p className="mt-1">
-                A verification link has been sent to your inbox. Click the link to verify your
-                email address before signing in.
-              </p>
+               <p className="mt-1">
+                 A 6-digit verification code has been sent to your inbox. Enter the code to verify your
+                 email address before signing in.
+               </p>
               {resendMessage ? (
                 <p className={`mt-2 ${resendMessage.includes("sent") ? "text-emerald-700" : "text-amber-700"}`}>
                   {resendMessage}

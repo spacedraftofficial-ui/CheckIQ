@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, History, ShieldCheck, X } from "lucide-react";
+import { Download, History, ShieldCheck, X, CheckCircle } from "lucide-react";
 import { ApiError, request } from "../../lib/api";
 import { EmptyState, ErrorState, LoadingBlock, StatusBadge } from "../../components/States";
 
@@ -22,6 +22,10 @@ interface CaseDetail {
   score: number | null;
   scoreOutcome: string | null;
   eligibilityResult: string | null;
+  openClarificationCount: number;
+  profileCompletion: { completed: number; total: number; percentage: number };
+  documentCompletion: { completed: number; total: number; percentage: number };
+  submissionReady: boolean;
   version: number;
 }
 
@@ -85,6 +89,7 @@ export function CaseDetailPage() {
     queryKey: ["ops", "case", caseId],
     queryFn: () => request<CaseDetail>(`/cases/${caseId}`),
     enabled: Boolean(caseId),
+    refetchInterval: 30_000,
   });
 
   const checks = useQuery({
@@ -179,6 +184,61 @@ export function CaseDetailPage() {
         />
         <Detail label="Eligibility" value={data.eligibilityResult ?? "Pending"} />
       </section>
+
+      <section className="grid gap-4 sm:grid-cols-2">
+        <div className="card p-5 sm:p-6">
+          <h2 className="text-base font-semibold text-ink-900">Profile completion</h2>
+          <div className="mt-3 flex items-center gap-3">
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-ink-200">
+              <div
+                className="h-full rounded-full bg-brand-600 transition-all"
+                style={{ width: `${data.profileCompletion.percentage}%` }}
+              />
+            </div>
+            <span className="text-sm font-medium text-ink-900">
+              {data.profileCompletion.completed}/{data.profileCompletion.total} ({data.profileCompletion.percentage}%)
+            </span>
+          </div>
+        </div>
+        <div className="card p-5 sm:p-6">
+          <h2 className="text-base font-semibold text-ink-900">Document completion</h2>
+          <div className="mt-3 flex items-center gap-3">
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-ink-200">
+              <div
+                className="h-full rounded-full bg-emerald-600 transition-all"
+                style={{ width: `${data.documentCompletion.percentage}%` }}
+              />
+            </div>
+            <span className="text-sm font-medium text-ink-900">
+              {data.documentCompletion.completed}/{data.documentCompletion.total} ({data.documentCompletion.percentage}%)
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {data.submissionReady ? null : (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <div className="flex items-start gap-2">
+            <div className="mt-0.5">
+              <CheckCircle className="h-4 w-4 text-amber-600" aria-hidden={true} />
+            </div>
+            <div>
+              <p className="font-semibold">Submission blocked</p>
+              <p>
+                The candidate has not completed all required profile fields
+                ({data.profileCompletion.total - data.profileCompletion.completed} missing)
+                and/or documents ({data.documentCompletion.total - data.documentCompletion.completed} missing).
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {data.openClarificationCount > 0 ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+          <p className="font-semibold">{data.openClarificationCount} open clarification(s) pending candidate response</p>
+        </div>
+      ) : null}
 
       <section className="card p-5 sm:p-6">
         <h2 className="text-base font-semibold text-ink-900">Verification checks</h2>

@@ -1,52 +1,67 @@
-import { useState, useEffect, useCallback } from "react";
-import { useSearchParams, useNavigate, Link } from "react-router-dom";
-import { CheckCircle, XCircle, RefreshCw, Mail } from "lucide-react";
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { CheckCircle, XCircle, Mail, RefreshCw } from "lucide-react";
 import { request, ApiError } from "../lib/api";
 import { InlineError } from "../components/States";
 import { AuthLayout } from "../components/Footer";
 
 export function VerifyEmailPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get("token");
   const [status, setStatus] = useState<"idle" | "verifying" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
-  const [showResend, setShowResend] = useState(false);
+  const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [resendEmail, setResendEmail] = useState("");
   const [resendMessage, setResendMessage] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
 
-  const startVerification = useCallback(async () => {
-    const tokenValue = token ?? null;
-    if (!tokenValue) {
-      setStatus("error");
-      setError("Verification token is missing or has been removed from the URL.");
-      setShowResend(true);
-      return;
+  const handleCodeChange = (index: number, value: string) => {
+    if (value.length > 1) return;
+    const newCode = [...code];
+    newCode[index] = value;
+    setCode(newCode);
+
+    if (value && index < 5) {
+      const nextInput = document.getElementById(`otp-digit-${index + 1}`);
+      nextInput?.focus();
     }
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !code[index] && index > 0) {
+      const prevInput = document.getElementById(`otp-digit-${index - 1}`);
+      prevInput?.focus();
+    }
+  };
+
+  const handleVerify = async () => {
+    const otpCode = code.join("");
+    if (otpCode.length !== 6) return;
 
     setStatus("verifying");
+    setError(null);
     try {
       await request("/auth/verify-email", {
         method: "POST",
-        body: { token: tokenValue },
+        body: { code: otpCode },
         auth: false,
       });
       setStatus("success");
+      sessionStorage.removeItem("dev_verify_otp");
       setTimeout(() => {
         navigate("/login", { replace: true });
       }, 2500);
     } catch (err) {
       setStatus("error");
-      setError(err instanceof ApiError ? err.message : "The verification link is invalid or has expired.");
-      setShowResend(true);
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : "The verification code is incorrect or has expired.",
+      );
+      setCode(["", "", "", "", "", ""]);
+      const firstInput = document.getElementById("otp-digit-0");
+      firstInput?.focus();
     }
-  }, [token, navigate]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void startVerification();
-  }, [startVerification]);
+  };
 
   const handleResend = async () => {
     if (!resendEmail) return;
@@ -87,9 +102,9 @@ export function VerifyEmailPage() {
                   <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-50">
                     <RefreshCw className="h-6 w-6 animate-spin text-brand-600" aria-hidden={true} />
                   </div>
-                  <h2 className="text-xl font-semibold text-ink-900">Verifying your email…</h2>
+                  <h2 className="text-xl font-semibold text-ink-900">Verifying your code…</h2>
                   <p className="mt-2 text-sm text-ink-600">
-                    Please wait while we confirm your email address.
+                    Please wait while we confirm your verification code.
                   </p>
                 </>
               )}
@@ -115,12 +130,54 @@ export function VerifyEmailPage() {
                   {error && <InlineError message={error} />}
                 </>
               )}
+
+              {(status === "idle" || status === "error") && (
+                <>
+                  <h2 className="text-lg font-semibold text-ink-900">Enter your verification code</h2>
+                  <p className="mt-2 text-sm text-ink-600">
+                    We sent a 6-digit code to the email address you provided during signup.
+                  </p>
+
+                  <form
+                    className="mt-6"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void handleVerify();
+                    }}
+                  >
+                    <div className="flex justify-center gap-2" role="group" aria-label="Verification code">
+                      {code.map((digit, index) => (
+                        <input
+                          key={index}
+                          id={`otp-digit-${index}`}
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={1}
+                          className="h-12 w-10 rounded-lg border border-ink-300 bg-white text-center text-xl font-semibold text-ink-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 focus:outline-none"
+                          value={digit}
+                          onChange={(e) => handleCodeChange(index, e.target.value)}
+                          onKeyDown={(e) => handleKeyDown(index, e)}
+                          autoComplete="one-time-code"
+                        />
+                      ))}
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="btn-primary mt-6 w-full"
+                      disabled={code.join("").length !== 6}
+                    >
+                      Verify
+                    </button>
+                  </form>
+                </>
+              )}
             </div>
 
-            {showResend && status === "error" && (
+            {(status !== "success") && (
               <div className="mt-6 space-y-4">
                 <p className="text-center text-sm text-ink-600">
-                  You can request a new verification link by entering your email below.
+                  Didn't receive the code? Enter your email to get a new one.
                 </p>
                 <div>
                   <label className="label" htmlFor="resend-email">
@@ -150,13 +207,19 @@ export function VerifyEmailPage() {
                   ) : (
                     <>
                       <Mail className="mr-2 h-4 w-4" aria-hidden={true} />
-                      Resend verification email
+                      Resend verification code
                     </>
                   )}
                 </button>
                 {resendMessage && (
                   <p
-                    className={`text-center text-sm ${resendMessage.toLowerCase().includes("sent") || resendMessage.toLowerCase().includes("exists") || resendMessage.toLowerCase().includes("already") ? "text-emerald-700" : "text-amber-700"}`}
+                    className={`text-center text-sm ${
+                      resendMessage.toLowerCase().includes("sent") ||
+                      resendMessage.toLowerCase().includes("exists") ||
+                      resendMessage.toLowerCase().includes("already")
+                        ? "text-emerald-700"
+                        : "text-amber-700"
+                    }`}
                     role="status"
                     aria-live="polite"
                   >
@@ -166,7 +229,7 @@ export function VerifyEmailPage() {
               </div>
             )}
 
-            {status === "success" || status === "error" ? (
+            {(status === "success" || status === "error") && (
               <div className="mt-6 border-t border-ink-200 pt-4 text-center">
                 <Link
                   to="/login"
@@ -175,7 +238,7 @@ export function VerifyEmailPage() {
                   Back to sign in
                 </Link>
               </div>
-            ) : null}
+            )}
           </div>
         </div>
       </div>

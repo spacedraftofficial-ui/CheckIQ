@@ -155,8 +155,8 @@ export interface SignupResult {
   email: string;
   fullName: string;
   requiresEmailVerification: boolean;
-  /** Raw verification token; only populated in development for testing convenience. */
-  verificationToken?: string | null;
+  /** Raw verification code; only populated in development for testing convenience. */
+  verificationCode?: string | null;
 }
 
 export async function signup(input: SignupRequest, context: RequestContext): Promise<SignupResult> {
@@ -324,7 +324,7 @@ export async function signup(input: SignupRequest, context: RequestContext): Pro
 
    // Send email verification
   const verificationEnabled = await getBooleanConfig("email_verification.enabled", true);
-  let verificationToken: string | null = null;
+  let verificationCode: string | null = null;
   if (verificationEnabled) {
     try {
       const { sendVerificationEmail } = await import("./email-verification.service.js");
@@ -334,9 +334,9 @@ export async function signup(input: SignupRequest, context: RequestContext): Pro
         fullName: input.fullName.trim(),
         candidateId: normalisedCandidateId,
       });
-      // In development, return the verification token for testing convenience.
+      // In development, return the verification code for testing convenience.
       if (getConfig().NODE_ENV === "development") {
-        verificationToken = result.token;
+        verificationCode = result.code;
       }
     } catch (emailErr) {
       getLogger().warn({ userId, err: emailErr }, "Failed to send verification email");
@@ -348,7 +348,7 @@ export async function signup(input: SignupRequest, context: RequestContext): Pro
     email: input.email.trim(),
     fullName: input.fullName.trim(),
     requiresEmailVerification: verificationEnabled,
-    verificationToken: getConfig().NODE_ENV === "development" ? verificationToken : undefined,
+    verificationCode: getConfig().NODE_ENV === "development" ? verificationCode : undefined,
   };
 }
 
@@ -434,7 +434,7 @@ export async function login(input: LoginRequest, context: RequestContext): Promi
         requestId: context.requestId ?? null,
       });
       throw unauthenticated(
-        "Please verify your email address before signing in. Check your inbox for a verification link or request a new one.",
+        "Please verify your email address before signing in. Check your inbox for a verification code, or request a new one.",
       );
     }
   }

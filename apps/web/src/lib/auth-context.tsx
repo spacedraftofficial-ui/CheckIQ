@@ -7,7 +7,7 @@ interface AuthContextValue {
   user: SessionUser | null;
   status: "loading" | "authenticated" | "anonymous";
   login: (identifier: string, password: string) => Promise<SessionUser>;
-  signup: (input: SignupInput) => Promise<void>;
+  signup: (input: SignupInput) => Promise<SignupResponse | null>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
 }
@@ -22,6 +22,14 @@ export interface SignupInput {
   company?: string;
   department?: string;
   position?: string;
+}
+
+export interface SignupResponse {
+  userId?: string;
+  email: string;
+  fullName: string;
+  requiresEmailVerification: boolean;
+  verificationCode?: string | null;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -97,8 +105,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signup = useCallback(
-    async (input: SignupInput) => {
-      const result = await request<{ userId?: string; email: string; fullName: string; requiresEmailVerification: boolean }>(
+    async (input: SignupInput): Promise<SignupResponse | null> => {
+      const result = await request<{
+        userId?: string;
+        email: string;
+        fullName: string;
+        requiresEmailVerification: boolean;
+        verificationCode?: string | null;
+      }>(
         "/auth/signup",
         {
           method: "POST",
@@ -117,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setStatus("anonymous");
       }
+      return result;
     },
     [],
   );

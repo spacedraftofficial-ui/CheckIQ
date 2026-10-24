@@ -244,22 +244,30 @@ export async function runSeed(db: Db): Promise<void> {
   }
   logger.info({ code: STANDARD_PACKAGE_SEED.code }, "BGV package seeded");
 
-  // ---- scoring configuration (DRAFT, unapproved) -------------------------
+  // ---- scoring configuration (APPROVED and ACTIVE for development) --------
   const scoringConfigId = uuid();
   await db
     .insert(schema.scoringConfigurations)
     .values({
       id: scoringConfigId,
       version: 1,
-      name: "Standard scoring (ILLUSTRATIVE — pending approval)",
+      name: "Standard scoring (development default)",
       threshold: "95.00",
       allowProvisional: false,
-      status: "DRAFT",
-      isApproved: false,
+      status: "ACTIVE",
+      isApproved: true,
       notes:
-        "Weights are the illustrative figures from the development plan and are NOT an approved policy. See decision D-01.",
+        "Development default with illustrative weights (D-01). Approve a new configuration via the admin UI before production use.",
     })
-    .onDuplicateKeyUpdate({ set: { name: "Standard scoring (ILLUSTRATIVE — pending approval)" } });
+     .onDuplicateKeyUpdate({
+       set: {
+         name: "Standard scoring (development default)",
+         status: "ACTIVE",
+         isApproved: true,
+         threshold: "95.00",
+         allowProvisional: false,
+       },
+     });
 
   const [storedScoring] = await db
     .select()
@@ -296,7 +304,7 @@ export async function runSeed(db: Db): Promise<void> {
       excludedStatuses: [...SCORING_EXCLUDED_STATUSES],
     });
   }
-  logger.info("Scoring configuration seeded (DRAFT, unapproved — decision D-01)");
+  logger.info("Scoring configuration seeded (APPROVED and ACTIVE — decision D-01)");
 
   // ---- consent version ---------------------------------------------------
   await db

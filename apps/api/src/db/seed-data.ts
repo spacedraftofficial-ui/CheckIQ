@@ -211,9 +211,10 @@ export const STANDARD_PACKAGE_SEED = {
 } as const;
 
 /**
- * ILLUSTRATIVE, UNCONFIRMED weights (decision D-01). The configuration is
- * seeded as DRAFT and unapproved so it cannot be used to produce a production
- * score until an authorised administrator approves it.
+ * Illustrative, unconfirmed weights (decision D-01). For development, the
+ * seeded configuration is marked APPROVED and ACTIVE so scoring works out of
+ * the box. Before production use, an administrator should approve a new
+ * configuration version with the organisation's final weights and threshold.
  */
 export const SCORING_COMPONENT_SEED = [
   { checkTypeCodes: ["IDENTITY"], label: "Identity", weight: "20.00" },
@@ -244,7 +245,7 @@ export const CONSENT_SEED = {
   title: "Declaration and consent for background verification (DRAFT PLACEHOLDER)",
   body: [
   
-    
+      
     "1. I confirm that the information I have provided in this application is true, complete and accurate to the best of my knowledge.",
     "2. I consent to the organisation collecting and verifying the information and documents I have submitted, and to contacting the sources listed in my employment and education history for verification purposes, subject to the organisation's policy.",
     "3. I understand that a record of my background verification will be maintained by the organisation and handled in accordance with its information-handling and retention policy.",

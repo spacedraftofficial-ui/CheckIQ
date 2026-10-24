@@ -13,7 +13,7 @@ import { changePassword, login, logout, refresh, signup } from "./auth.service.j
 import { REFRESH_COOKIE_NAME } from "./auth.service.js";
 import { clearRefreshCookie, setRefreshCookie } from "./auth.cookie.js";
 import { buildSessionUser } from "./auth.service.js";
-import { verifyEmailToken, resendVerificationEmail } from "./email-verification.service.js";
+import { verifyEmailOtp, resendVerificationEmail } from "./email-verification.service.js";
 
 export const authRouter = Router();
 
@@ -44,9 +44,9 @@ authRouter.post(
       fullName: result.fullName,
       requiresEmailVerification: result.requiresEmailVerification,
     };
-    // Only expose the verification token in development for testing convenience.
-    if (result.verificationToken) {
-      responseData.verificationToken = result.verificationToken;
+    // Only expose the verification code in development for testing convenience.
+    if (result.verificationCode) {
+      responseData.verificationCode = result.verificationCode;
     }
     res.status(201).json({ data: responseData });
   },
@@ -70,14 +70,14 @@ authRouter.post(
  * POST /api/auth/verify-email
  */
 const verifyEmailSchema = z.object({
-  token: z.string().min(1, "Verification token is required"),
+  code: z.string().length(6, "Enter the 6-digit verification code"),
 });
 
 authRouter.post(
   "/verify-email",
   validate({ body: verifyEmailSchema }),
   async (req, res) => {
-    const result = await verifyEmailToken(req.body.token);
+    const result = await verifyEmailOtp(req.body.code);
     if (result.success) {
       res.status(200).json({ data: { verified: true, message: result.message } });
     } else {

@@ -11,7 +11,7 @@ describe("email verification", () => {
     await resetDatabase();
   });
 
-  it("sends a verification email on signup (development token is returned)", async () => {
+  it("sends a verification code on signup (development code is returned)", async () => {
     const candidateId = uniqueCandidateId();
     const email = `${candidateId.toLowerCase()}@example.test`;
     const response = await api({
@@ -31,6 +31,8 @@ describe("email verification", () => {
     expect(response.body.data.email).toBe(email);
     expect(response.body.data.requiresEmailVerification).toBe(true);
     expect(response.body.data.userId).toBeTruthy();
+    expect(response.body.data.verificationCode).toBeDefined();
+    expect(response.body.data.verificationCode).toMatch(/^\d{6}$/);
 
     // Verify the token exists in the database
     const { getDatabase, schema } = await import("../src/db/client.js");
@@ -91,7 +93,7 @@ describe("email verification", () => {
       },
     });
 
-    // Verify directly in DB (simulating clicking the verification link)
+    // Verify directly in DB (simulating admin verification)
     await db
       .update(schema.users)
       .set({ isEmailVerified: true })
@@ -108,10 +110,7 @@ describe("email verification", () => {
     expect(login.body.data.accessToken).toBeTruthy();
   });
 
-  it("verifies email via the token endpoint", async () => {
-    const { getDatabase, schema } = await import("../src/db/client.js");
-    const { db } = getDatabase();
-
+  it("verifies email via the OTP endpoint", async () => {
     const candidateId = uniqueCandidateId();
     const email = `${candidateId.toLowerCase()}@example.test`;
     const signup = await api({
@@ -119,7 +118,7 @@ describe("email verification", () => {
       path: "/api/auth/signup",
       body: {
         candidateId,
-        fullName: "Token Test",
+        fullName: "OTP Test",
         email,
         mobile: "+919812345678",
         password: "Str0ng!Passw0rd",
@@ -127,32 +126,25 @@ describe("email verification", () => {
       },
     });
 
-    // Extract the token from the database (not returned in test mode)
-    const [tokenRecord] = await db
-      .select()
-      .from(schema.emailVerificationTokens)
-      .where(eq(schema.emailVerificationTokens.userId, signup.body.data.userId))
-      .limit(1);
-    expect(tokenRecord).toBeTruthy();
+    const code = signup.body.data.verificationCode;
+    expect(code).toBeDefined();
 
-    // We can't get the raw token from the hash, so use the API endpoint to test directly
-    // Instead, test with a fake token (should fail) and then verify the flow
-    const invalidVerify = await api({
+    const verify = await api({
       method: "post",
       path: "/api/auth/verify-email",
-      body: { token: "nonexistent-token" },
+      body: { code: code as string },
       auth: false,
     });
 
-    expect(invalidVerify.status).toBe(400);
-    expect(invalidVerify.body.error.code).toBe("EMAIL_VERIFICATION_FAILED");
+    expect(verify.status).toBe(200);
+    expect(verify.body.data.verified).toBe(true);
   });
 
-  it("rejects an invalid verification token", async () => {
+  it("rejects an invalid verification code", async () => {
     const response = await api({
       method: "post",
       path: "/api/auth/verify-email",
-      body: { token: "invalid-token-value" },
+      body: { code: "000000" },
       auth: false,
     });
 
@@ -160,11 +152,11 @@ describe("email verification", () => {
     expect(response.body.error.code).toBe("EMAIL_VERIFICATION_FAILED");
   });
 
-  it("rejects an empty verification token", async () => {
+  it("rejects a malformed verification code", async () => {
     const response = await api({
       method: "post",
       path: "/api/auth/verify-email",
-      body: { token: "" },
+      body: { code: "abc" },
       auth: false,
     });
 
