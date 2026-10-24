@@ -19,7 +19,7 @@ export function createDatabase(url: string, poolSize: number) {
     dateStrings: false,
     supportBigNumbers: true,
     decimalNumbers: true,
-    ssl: isAiven ? { rejectUnauthorized: true } : undefined,
+    ssl: isAiven ? { rejectUnauthorized: false } : undefined,
   });
   const db = drizzle(pool, { schema, mode: "default" });
   return { pool, db };
