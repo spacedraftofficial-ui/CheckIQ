@@ -4,9 +4,6 @@ build/
 coverage/
 .vite/
 *.local
-.env
-.env.*
-!.env.example
 .DS_Store
 Thumbs.db
 logs/
