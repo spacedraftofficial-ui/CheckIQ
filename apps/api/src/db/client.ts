@@ -9,6 +9,7 @@ export type DatabaseClient = Database["db"];
 let instance: Database | undefined;
 
 export function createDatabase(url: string, poolSize: number) {
+  const isAiven = url.includes("aivencloud.com");
   const pool = mysql.createPool({
     uri: url,
     connectionLimit: poolSize,
@@ -18,6 +19,7 @@ export function createDatabase(url: string, poolSize: number) {
     dateStrings: false,
     supportBigNumbers: true,
     decimalNumbers: true,
+    ssl: isAiven ? { rejectUnauthorized: true } : undefined,
   });
   const db = drizzle(pool, { schema, mode: "default" });
   return { pool, db };
