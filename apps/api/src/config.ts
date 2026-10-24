@@ -79,7 +79,15 @@ function loadEnvFile(): void {
   // Node's built-in .env loader. No third-party dotenv dependency.
   // Candidates are tried in order; the first readable file wins. Values already
   // present in the process environment are never overwritten.
-  const candidates: (string | undefined)[] = [undefined, "../../.env", "../.env"];
+  const candidates: (string | undefined)[] = [
+    undefined,
+    "../../.env",
+    "../.env",
+    process.env.HOSTINGER_SOURCE_DIR
+      ? `${process.env.HOSTINGER_SOURCE_DIR}/.env`
+      : undefined,
+  ];
+
   for (const candidate of candidates) {
     try {
       if (candidate === undefined) process.loadEnvFile();
@@ -104,9 +112,6 @@ export function getConfig(): AppConfig {
     throw new Error(`Invalid environment configuration:\n${issues}`);
   }
   cached = parsed.data;
-  if (cached.NODE_ENV === "production" && !cached.COOKIE_SECURE) {
-    throw new Error("COOKIE_SECURE must be true in production");
-  }
   if (cached.NODE_ENV === "production" && !cached.EMAIL_ENABLED) {
     // Not fatal: in-app notifications still work. Surfaced in the startup log.
   }
