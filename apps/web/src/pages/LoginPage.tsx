@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ApiError } from "../lib/api";
 import { homeRouteFor, useAuth } from "../lib/auth-context";
 import { InlineError } from "../components/States";
+import { AuthLayout } from "../components/Footer";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -31,8 +32,8 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-ink-50">
-      <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-12">
+    <AuthLayout>
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center px-4 py-12">
         <div className="card p-6 sm:p-8">
           <div className="flex items-center gap-2">
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">
@@ -100,6 +101,6 @@ export function LoginPage() {
           </p>
         </div>
       </div>
-    </div>
+    </AuthLayout>
   );
 }

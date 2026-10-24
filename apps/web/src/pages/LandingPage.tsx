@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, ShieldCheck } from "lucide-react";
+import { AuthLayout } from "../components/Footer";
 
 /**
  * The landing screen.
@@ -21,8 +22,8 @@ export function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-ink-50">
-      <div className="mx-auto flex min-h-screen max-w-5xl flex-col justify-center px-4 py-12 sm:px-6">
+    <AuthLayout>
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl flex-col justify-center px-4 py-12 sm:px-6">
         <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
           <div>
             <div className="flex items-center gap-2">
@@ -43,12 +44,12 @@ export function LandingPage() {
 
             <ul className="mt-6 space-y-2 text-sm text-ink-600">
               <li className="flex items-start gap-2">
-                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" aria-hidden="true" />
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" aria-hidden={true} />
                 Your information is stored privately and is only visible to authorised
                 verification staff.
               </li>
               <li className="flex items-start gap-2">
-                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" aria-hidden="true" />
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" aria-hidden={true} />
                 If anything needs clarification, you will be told exactly what to provide.
               </li>
             </ul>
@@ -80,7 +81,7 @@ export function LandingPage() {
 
               <button type="submit" className="btn-primary w-full">
                 Continue
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                <ArrowRight className="h-4 w-4" aria-hidden={true} />
               </button>
             </form>
 
@@ -93,6 +94,6 @@ export function LandingPage() {
           </div>
         </div>
       </div>
-    </div>
+    </AuthLayout>
   );
 }

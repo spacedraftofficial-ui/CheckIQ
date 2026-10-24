@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Bell, FileCheck2, LayoutDashboard, LogOut, ShieldCheck, Users, Settings } from "lucide-react";
 import { useAuth } from "../lib/auth-context";
 import { request } from "../lib/api";
+import { Footer } from "./Footer";
 
 const candidateLinks = [
   { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -40,7 +41,7 @@ export function Layout() {
   };
 
   return (
-    <div className="min-h-screen bg-ink-50">
+    <div className="flex min-h-screen flex-col bg-ink-50">
       <header className="border-b border-ink-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-2">
@@ -101,16 +102,11 @@ export function Layout() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+      <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
         <Outlet />
       </main>
 
-      <footer className="border-t border-ink-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-4 text-xs text-ink-500 sm:px-6">
-          CheckIQ — background verification. Candidate and verification data is handled
-          as sensitive personal information.
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

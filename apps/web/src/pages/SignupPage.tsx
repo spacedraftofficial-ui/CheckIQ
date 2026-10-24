@@ -6,6 +6,7 @@ import { z } from "zod";
 import { ApiError, request } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { InlineError } from "../components/States";
+import { AuthLayout } from "../components/Footer";
 
 const signupSchema = z
   .object({
@@ -99,7 +100,7 @@ export function SignupPage() {
   });
 
   return (
-    <div className="min-h-screen bg-ink-50">
+    <AuthLayout>
       <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
         <div className="card p-6 sm:p-8">
           <h1 className="text-2xl font-bold text-ink-900">Create your account</h1>
@@ -284,6 +285,6 @@ export function SignupPage() {
           )}
         </div>
       </div>
-    </div>
+    </AuthLayout>
   );
 }
