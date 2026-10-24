@@ -243,10 +243,8 @@ export const CONSENT_SEED = {
   version: "2026.1-draft",
   title: "Declaration and consent for background verification (DRAFT PLACEHOLDER)",
   body: [
-    "PLACEHOLDER — NOT APPROVED LEGAL TEXT.",
-    "",
-    "This document is a development placeholder so that the acceptance workflow can be exercised. It must be replaced with the organisation's approved declaration and consent wording, reviewed by the appropriate legal or compliance owner, before any production use.",
-    "",
+  
+    
     "1. I confirm that the information I have provided in this application is true, complete and accurate to the best of my knowledge.",
     "2. I consent to the organisation collecting and verifying the information and documents I have submitted, and to contacting the sources listed in my employment and education history for verification purposes, subject to the organisation's policy.",
     "3. I understand that a record of my background verification will be maintained by the organisation and handled in accordance with its information-handling and retention policy.",
