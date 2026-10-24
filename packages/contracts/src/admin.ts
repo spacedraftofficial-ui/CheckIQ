@@ -7,6 +7,7 @@ export const adminUserSchema = z.object({
   email: z.email(),
   fullName: z.string(),
   isActive: z.boolean(),
+  isEmailVerified: z.boolean(),
   roles: z.array(userRoleSchema),
   lastLoginAt: z.string().nullable(),
   createdAt: z.string(),

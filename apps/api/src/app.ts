@@ -41,9 +41,29 @@ export function createApp(): Express {
   app.use(
     helmet({
       // The API serves JSON only; the SPA is served separately.
-      contentSecurityPolicy: false,
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", "data:", "https:"],
+          fontSrc: ["'self'", "https:", "data:"],
+          connectSrc: ["'self'"],
+          frameSrc: ["'none'"],
+          objectSrc: ["'none'"],
+          baseUri: ["'self'"],
+          formAction: ["'self'"],
+        },
+      },
       crossOriginResourcePolicy: { policy: "same-site" },
       referrerPolicy: { policy: "no-referrer" },
+      ...(config.NODE_ENV === "production" && {
+        strictTransportSecurity: {
+          maxAge: 31536000,
+          includeSubDomains: true,
+          preload: true,
+        },
+      }),
     }),
   );
 
