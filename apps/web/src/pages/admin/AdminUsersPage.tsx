@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { UserPlus, Search, AlertTriangle, X } from "lucide-react";
 import { ApiError, request, requestPage, toQueryString } from "../../lib/api";
 import { EmptyState, ErrorState, InlineError, LoadingBlock, StatusBadge } from "../../components/States";
@@ -235,7 +236,14 @@ export function AdminUsersPage() {
             <tbody className="divide-y divide-ink-200">
               {usersData.data.map((user) => (
                 <tr key={user.id}>
-                  <td className="px-4 py-3 font-medium text-ink-900">{user.fullName}</td>
+                  <td className="px-4 py-3">
+                    <Link
+                      to={`/admin/users/${user.id}`}
+                      className="font-medium text-ink-900 underline hover:text-brand-700"
+                    >
+                      {user.fullName}
+                    </Link>
+                  </td>
                   <td className="px-4 py-3 text-ink-700 break-all">{user.email}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">

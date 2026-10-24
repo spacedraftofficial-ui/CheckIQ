@@ -34,9 +34,7 @@ export function AdminPackagesPage() {
 
   if (packages.isLoading) return <LoadingBlock label="Loading packages" />;
   if (packages.isError) {
-    if (!packages.data) return <LoadingBlock label="Loading packages" />;
-
-  return (
+    return (
       <ErrorState
         title="We could not load the packages"
         message={packages.error instanceof Error ? packages.error.message : undefined}

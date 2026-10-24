@@ -121,6 +121,144 @@ adminRouter.get(
 );
 
 /**
+ * GET /api/admin/users/:id
+ *
+ * Returns a user's full profile including their roles, email verification status,
+ * account lockout state, and associated audit events. The audit trail is
+ * append-only and filtered to actions involving this user.
+ */
+adminRouter.get(
+  "/admin/users/:id",
+  requirePrincipal,
+  requirePermission("user:manage"),
+  validate({ params: idParam }),
+  async (req, res) => {
+    const { db } = getDatabase();
+    const userId = param(req, "id");
+
+    const [user] = await db
+      .select({
+        id: schema.users.id,
+        email: schema.users.email,
+        emailNormalized: schema.users.emailNormalized,
+        fullName: schema.users.fullName,
+        mobile: schema.users.mobile,
+        isActive: schema.users.isActive,
+        isEmailVerified: schema.users.isEmailVerified,
+        mustChangePassword: schema.users.mustChangePassword,
+        failedLoginAttempts: schema.users.failedLoginAttempts,
+        lockedUntil: schema.users.lockedUntil,
+        lastLoginAt: schema.users.lastLoginAt,
+        createdAt: schema.users.createdAt,
+        updatedAt: schema.users.updatedAt,
+      })
+      .from(schema.users)
+      .where(eq(schema.users.id, userId))
+      .limit(1);
+
+    if (!user) throw notFound("User not found");
+
+    const activeRoles = await db
+      .select({ code: schema.userRoles.roleCode, assignedAt: schema.userRoles.assignedAt })
+      .from(schema.userRoles)
+      .where(
+        and(
+          eq(schema.userRoles.userId, user.id),
+          isNull(schema.userRoles.revokedAt),
+        ),
+      );
+
+    const revokedRoles = await db
+      .select({
+        code: schema.userRoles.roleCode,
+        revokedAt: schema.userRoles.revokedAt,
+      })
+      .from(schema.userRoles)
+      .where(
+        and(
+          eq(schema.userRoles.userId, user.id),
+          sql`revoked_at IS NOT NULL`,
+        ),
+      );
+
+    const associatedCases = await db
+      .select({
+        id: schema.bgvCases.id,
+        caseNumber: schema.bgvCases.caseNumber,
+        status: schema.bgvCases.status,
+        submittedAt: schema.bgvCases.submittedAt,
+        createdAt: schema.bgvCases.createdAt,
+      })
+      .from(schema.bgvCases)
+      .innerJoin(
+        schema.candidateProfiles,
+        eq(schema.candidateProfiles.userId, user.id),
+      )
+      .where(eq(schema.bgvCases.profileId, schema.candidateProfiles.id))
+      .orderBy(desc(schema.bgvCases.createdAt))
+      .limit(50);
+
+    const auditRows = await db
+      .select()
+      .from(schema.auditEvents)
+      .where(
+        or(
+          eq(schema.auditEvents.actorId, user.id),
+          eq(schema.auditEvents.entityId, user.id),
+        ),
+      )
+      .orderBy(desc(schema.auditEvents.createdAt))
+      .limit(100);
+
+    res.status(200).json({
+      data: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        mobile: user.mobile,
+        isActive: user.isActive,
+        isEmailVerified: user.isEmailVerified,
+        mustChangePassword: user.mustChangePassword,
+        failedLoginAttempts: user.failedLoginAttempts,
+        lockedUntil: user.lockedUntil?.toISOString() ?? null,
+        lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString(),
+        roles: activeRoles.map((row) => row.code as (typeof USER_ROLES)[number]),
+        revokedRoles: revokedRoles.map((row) => ({
+          code: row.code as (typeof USER_ROLES)[number],
+          revokedAt: row.revokedAt!.toISOString(),
+        })),
+        associatedCases: associatedCases.map((row) => ({
+          id: row.id,
+          caseNumber: row.caseNumber,
+          status: row.status,
+          submittedAt: row.submittedAt?.toISOString() ?? null,
+          createdAt: row.createdAt.toISOString(),
+        })),
+        auditTrail: auditRows.map((row) => ({
+          id: row.id,
+          action: row.action,
+          actorId: row.actorId,
+          actorName: row.actorName,
+          actorRole: row.actorRole,
+          entityType: row.entityType,
+          entityId: row.entityId,
+          caseId: row.caseId,
+          candidateId: row.candidateId,
+          previousValue: row.previousValue,
+          newValue: row.newValue,
+          reason: row.reason,
+          ipAddress: row.ipAddress,
+          requestId: row.requestId,
+          createdAt: row.createdAt.toISOString(),
+        })),
+      },
+    });
+  },
+);
+
+/**
  * POST /api/admin/users
  */
 adminRouter.post(

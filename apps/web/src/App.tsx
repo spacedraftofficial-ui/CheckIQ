@@ -21,6 +21,7 @@ import { VerificationPage } from "./pages/ops/VerificationPage";
 import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
 import { AdminConfigPage } from "./pages/admin/AdminConfigPage";
 import { AdminPackagesPage } from "./pages/admin/AdminPackagesPage";
+import { UserDetailPage } from "./pages/admin/UserDetailPage";
 
 function FullPageSpinner() {
   return (
@@ -181,14 +182,22 @@ export function App() {
           }
         />
 
-        <Route
-          path="/admin/users"
-          element={
-            <RequireAuth roles={["ADMINISTRATOR", "SUPER_ADMINISTRATOR"]}>
-              <AdminUsersPage />
-            </RequireAuth>
-          }
-        />
+         <Route
+           path="/admin/users"
+           element={
+             <RequireAuth roles={["ADMINISTRATOR", "SUPER_ADMINISTRATOR"]}>
+               <AdminUsersPage />
+             </RequireAuth>
+           }
+         />
+         <Route
+           path="/admin/users/:id"
+           element={
+             <RequireAuth roles={["ADMINISTRATOR", "SUPER_ADMINISTRATOR"]}>
+               <UserDetailPage />
+             </RequireAuth>
+           }
+         />
         <Route
           path="/admin/config"
           element={

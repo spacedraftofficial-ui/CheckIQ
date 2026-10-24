@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, FileText, ShieldCheck } from "lucide-react";
+import { Download, History, ShieldCheck, X } from "lucide-react";
 import { ApiError, request } from "../../lib/api";
 import { EmptyState, ErrorState, LoadingBlock, StatusBadge } from "../../components/States";
 
@@ -53,12 +53,33 @@ interface DocumentRow {
   label: string;
   status: string;
   versionCount: number;
-  currentVersion: { id: string; originalFilename: string; sizeBytes: number } | null;
+  currentVersion: {
+    id: string;
+    originalFilename: string;
+    sizeBytes: number;
+    uploadedAt: string;
+    uploadedBy: string;
+    mimeType: string;
+    malwareScanStatus: string;
+  } | null;
+}
+
+interface DocumentVersion {
+  id: string;
+  versionNumber: number;
+  originalFilename: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedAt: string;
+  uploadedBy: string | null;
+  isCurrent: boolean;
+  malwareScanStatus: string;
 }
 
 export function CaseDetailPage() {
   const { caseId } = useParams<{ caseId: string }>();
   const queryClient = useQueryClient();
+  const [versionsFor, setVersionsFor] = useState<string | null>(null);
 
   const detail = useQuery({
     queryKey: ["ops", "case", caseId],
@@ -76,6 +97,12 @@ export function CaseDetailPage() {
     queryKey: ["ops", "case", caseId, "documents"],
     queryFn: () => request<DocumentRow[]>(`/cases/${caseId}/documents`),
     enabled: Boolean(caseId),
+  });
+
+  const versions = useQuery({
+    queryKey: ["ops", "document-versions", versionsFor],
+    queryFn: () => request<DocumentVersion[]>(`/documents/${versionsFor}/versions`),
+    enabled: Boolean(versionsFor),
   });
 
   const history = useQuery({
@@ -126,7 +153,7 @@ export function CaseDetailPage() {
             {data.status.replace(/_/g, " ").toLowerCase()}
           </StatusBadge>
           <Link className="btn-secondary" to={`/ops/cases/${data.id}/report`}>
-            <FileText className="h-4 w-4" aria-hidden="true" />
+            <Download className="h-4 w-4" aria-hidden={true} />
             View report
           </Link>
           <Link to={`/ops/cases/${data.id}/verification`} className="btn-primary">
@@ -219,25 +246,51 @@ export function CaseDetailPage() {
           <ul className="mt-4 divide-y divide-ink-200">
             {(documents.data ?? []).map((document) => (
               <li key={document.id} className="flex flex-wrap items-center gap-3 py-3">
-                <FileText className="h-4 w-4 shrink-0 text-ink-400" aria-hidden="true" />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-ink-900">{document.label}</p>
-                  <p className="text-xs text-ink-500">
-                    {document.currentVersion
-                      ? `${document.currentVersion.originalFilename} · v${document.versionCount}`
-                      : "Not uploaded"}
-                  </p>
+                  {document.currentVersion ? (
+                    <>
+                      <p className="mt-0.5 text-xs text-ink-500">
+                        {document.currentVersion.originalFilename} · v{document.versionCount} ·{" "}
+                        {formatBytes(document.currentVersion.sizeBytes)}
+                      </p>
+                      <p className="mt-0.5 text-xs text-ink-400">
+                        Uploaded {new Date(document.currentVersion.uploadedAt).toLocaleString()}
+                        {document.currentVersion.malwareScanStatus === "CLEAN" ? (
+                          <span className="ml-1 rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-800">
+                            Scan OK
+                          </span>
+                        ) : document.currentVersion.malwareScanStatus === "INFECTED" ? (
+                          <span className="ml-1 rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-800">
+                            Malware detected
+                          </span>
+                        ) : null}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="mt-0.5 text-xs text-ink-500">Not uploaded</p>
+                  )}
                 </div>
                 <StatusBadge tone={document.status === "ACCEPTED" ? "success" : "info"}>
                   {document.status.replace(/_/g, " ").toLowerCase()}
                 </StatusBadge>
                 {document.currentVersion ? (
+                  <button
+                    type="button"
+                    className="btn-secondary text-xs"
+                    onClick={() => setVersionsFor(document.id)}
+                  >
+                    <History className="h-4 w-4" aria-hidden={true} />
+                    {document.versionCount} version(s)
+                  </button>
+                ) : null}
+                {document.currentVersion ? (
                   <a
-                    className="btn-secondary"
+                    className="btn-secondary text-xs"
                     href={`/api/documents/${document.id}/versions/${document.currentVersion.id}/download`}
                     download
                   >
-                    <Download className="h-4 w-4" aria-hidden="true" />
+                    <Download className="h-4 w-4" aria-hidden={true} />
                     Download
                   </a>
                 ) : null}
@@ -246,6 +299,66 @@ export function CaseDetailPage() {
           </ul>
         )}
       </section>
+
+      {versionsFor && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Document version history"
+        >
+          <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-ink-900">Document version history</h2>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => setVersionsFor(null)}
+              >
+                <X className="h-4 w-4" aria-hidden={true} />
+              </button>
+            </div>
+            {versions.isLoading ? (
+              <div className="mt-4">
+                <LoadingBlock label="Loading versions" />
+              </div>
+            ) : (versions.data ?? []).length === 0 ? (
+              <p className="mt-4 text-sm text-ink-500">No versions available.</p>
+            ) : (
+              <ul className="mt-4 divide-y divide-ink-200">
+                {(versions.data ?? []).map((version) => (
+                  <li key={version.id} className="flex flex-wrap items-center gap-3 py-3">
+                    <span className="font-mono text-sm text-ink-700">v{version.versionNumber}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm text-ink-800">
+                      {version.originalFilename}
+                    </span>
+                    <span className="text-xs text-ink-500">
+                      {formatBytes(version.sizeBytes)} ·{" "}
+                      {new Date(version.uploadedAt).toLocaleDateString()}
+                    </span>
+                    {version.malwareScanStatus === "CLEAN" ? (
+                      <span className="text-xs font-medium text-emerald-700">Scan OK</span>
+                    ) : version.malwareScanStatus === "INFECTED" ? (
+                      <span className="text-xs font-medium text-red-700">Malware</span>
+                    ) : null}
+                    {version.isCurrent && (
+                      <span className="text-xs font-medium text-brand-700">Current</span>
+                    )}
+                    <a
+                      className="btn-secondary text-xs"
+                      href={`/api/documents/${versionsFor}/versions/${version.id}/download`}
+                      download
+                    >
+                      <Download className="h-4 w-4" aria-hidden={true} />
+                      Download
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
 
       <section className="card p-5 sm:p-6">
         <h2 className="text-base font-semibold text-ink-900">Request clarification</h2>
@@ -362,4 +475,10 @@ function ClarificationForm({
       </button>
     </form>
   );
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

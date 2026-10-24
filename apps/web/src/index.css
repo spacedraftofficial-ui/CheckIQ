@@ -69,12 +69,20 @@
   @apply btn border border-ink-300 bg-white text-ink-800 hover:bg-ink-50;
 }
 
+@utility btn-warning {
+  @apply btn border border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-200;
+}
+
 @utility btn-danger {
   @apply btn bg-red-600 text-white hover:bg-red-700;
 }
 
 @utility btn-ghost {
   @apply btn text-ink-700 hover:bg-ink-100;
+}
+
+@utility btn-outline {
+  @apply btn border border-brand-300 bg-transparent text-brand-700 hover:bg-brand-50;
 }
 
 @layer components {
