@@ -76,11 +76,9 @@ export function DocumentsPage() {
 
   if (dashboard.isLoading) return <LoadingBlock label="Loading your documents" />;
   if (dashboard.isError) {
-    if (!documents.data) return <LoadingBlock label="Loading documents" />;
-
-  return (
+    return (
       <ErrorState
-        title="We could not load your documents"
+        title="We could not load your verification"
         message={dashboard.error instanceof Error ? dashboard.error.message : undefined}
         onRetry={() => void dashboard.refetch()}
       />

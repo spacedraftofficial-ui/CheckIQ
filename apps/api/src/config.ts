@@ -112,6 +112,13 @@ export function getConfig(): AppConfig {
     throw new Error(`Invalid environment configuration:\n${issues}`);
   }
   cached = parsed.data;
+  if (cached.NODE_ENV === "production" && !cached.COOKIE_SECURE) {
+    // Log a warning but don't block startup. Hostinger single-site deployments
+    // may not have HTTPS configured, so COOKIE_SECURE=false is sometimes valid.
+    console.warn(
+      "[warn] COOKIE_SECURE is not set to true in production. For HTTPS deployments, set COOKIE_SECURE=true.",
+    );
+  }
   if (cached.NODE_ENV === "production" && !cached.EMAIL_ENABLED) {
     // Not fatal: in-app notifications still work. Surfaced in the startup log.
   }
