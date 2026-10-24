@@ -16,3 +16,6 @@ tmp/
 
 # Local MySQL runtime directory
 .local/
+
+# Environment files with secrets - set via Hostinger hPanel instead
+.env
