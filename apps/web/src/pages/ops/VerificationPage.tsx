@@ -44,6 +44,7 @@ export function VerificationPage() {
     queryKey: ["ops", "case", caseId, "checks"],
     queryFn: () => request<CheckRow[]>(`/cases/${caseId}/checks`),
     enabled: Boolean(caseId),
+    refetchInterval: 30_000,
   });
 
   const score = useQuery({
@@ -51,6 +52,7 @@ export function VerificationPage() {
     queryFn: () => request<ScoreRecord>(`/cases/${caseId}/score`),
     enabled: Boolean(caseId),
     retry: false,
+    refetchInterval: 30_000,
   });
 
   const record = useMutation({
@@ -65,6 +67,8 @@ export function VerificationPage() {
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["ops", "case", caseId] });
+      await queryClient.invalidateQueries({ queryKey: ["ops", "case", caseId, "checks"] });
+      await queryClient.invalidateQueries({ queryKey: ["ops", "case", caseId, "score"] });
     },
   });
 
@@ -72,6 +76,7 @@ export function VerificationPage() {
     mutationFn: () => request(`/cases/${caseId}/score/generate`, { method: "POST", body: {} }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["ops", "case", caseId] });
+      await queryClient.invalidateQueries({ queryKey: ["ops", "case", caseId, "score"] });
     },
   });
 

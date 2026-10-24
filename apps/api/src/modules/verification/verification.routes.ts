@@ -20,11 +20,13 @@ import {
 } from "../../lib/errors.js";
 import { newId } from "../../lib/ids.js";
 import { withDeadlockRetry } from "../../lib/retry.js";
+import { getLogger } from "../../lib/logger.js";
 import { recordAudit } from "../../services/audit.service.js";
 import { resolveCase } from "../../services/access.service.js";
 import { transitionCase } from "../../services/case.service.js";
 import { notifyCandidate, queueNotification } from "../../services/notification.service.js";
 import { CANDIDATE_VISIBLE_STATUSES } from "../cases/case-state.js";
+import { generateScore } from "../scoring/scoring.service.js";
 
 export const verificationRouter = Router();
 
@@ -153,6 +155,19 @@ verificationRouter.post(
       { caseNumber: caseRow.caseNumber },
       { caseId: caseRow.id, deduplicationKey: `verification-completed-${caseRow.id}` },
     );
+
+    try {
+      await generateScore(caseRow.id, {
+        userId: req.principal!.userId,
+        fullName: req.principal!.fullName,
+        role: req.principal!.roles[0] ?? null,
+      });
+    } catch (err) {
+      getLogger().warn(
+        { caseId: caseRow.id, err },
+        "Automatic score generation failed after verification completed — it can be retried from the verification page",
+      );
+    }
 
     res.status(200).json({ data: { caseId: caseRow.id, status: "VERIFICATION_COMPLETED" } });
   },
