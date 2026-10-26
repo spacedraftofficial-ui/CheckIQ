@@ -10,6 +10,7 @@ interface AdminUser {
   email: string;
   fullName: string;
   isActive: boolean;
+  deletedAt: string | null;
   isEmailVerified: boolean;
   roles: string[];
   lastLoginAt: string | null;
@@ -272,9 +273,13 @@ export function AdminUsersPage() {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <StatusBadge tone={user.isActive ? "success" : "danger"}>
-                      {user.isActive ? "Active" : "Disabled"}
-                    </StatusBadge>
+                    {user.deletedAt ? (
+                      <StatusBadge tone="neutral">Deleted</StatusBadge>
+                    ) : (
+                      <StatusBadge tone={user.isActive ? "success" : "danger"}>
+                        {user.isActive ? "Active" : "Disabled"}
+                      </StatusBadge>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-xs text-ink-500">
                     {user.lastLoginAt
@@ -284,19 +289,23 @@ export function AdminUsersPage() {
                         })
                       : "Never"}
                   </td>
-                  <td className="px-4 py-3">
-                    <button
-                      type="button"
-                      className="btn-secondary text-sm"
-                      disabled={deactivate.isPending}
-                      onClick={() => {
-                        setConfirmUserId(user.id);
-                        setConfirmAction(user.isActive ? "deactivate" : "activate");
-                      }}
-                    >
-                      {user.isActive ? "Disable" : "Enable"}
-                    </button>
-                  </td>
+                   <td className="px-4 py-3">
+                     {user.deletedAt ? (
+                       <span className="text-sm text-ink-400 italic">Deleted</span>
+                     ) : (
+                       <button
+                         type="button"
+                         className="btn-secondary text-sm"
+                         disabled={deactivate.isPending}
+                         onClick={() => {
+                           setConfirmUserId(user.id);
+                           setConfirmAction(user.isActive ? "deactivate" : "activate");
+                         }}
+                       >
+                         {user.isActive ? "Disable" : "Enable"}
+                       </button>
+                     )}
+                   </td>
                 </tr>
               ))}
             </tbody>

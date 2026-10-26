@@ -64,6 +64,7 @@ export async function applyMigrations(
     timezone: "Z",
     supportBigNumbers: true,
     decimalNumbers: true,
+    ssl: databaseUrl.includes("aivencloud.com") ? { rejectUnauthorized: false } : undefined,
   });
 
   try {

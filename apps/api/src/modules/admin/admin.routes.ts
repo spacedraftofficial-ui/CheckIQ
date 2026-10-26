@@ -25,7 +25,7 @@ import { USER_ROLES } from "@checkiq/contracts";
 export const adminRouter = Router();
 
 const idParam = z.object({ id: z.string().uuid() });
-const deleteUserBody = z.object({ reason: z.string().trim().max(1000).optional() });
+const deleteUserBody = z.object({ reason: z.string().trim().max(1000).optional() }).strict().default({});
 const configParam = z.object({ key: z.string().min(1).max(96) });
 const templateParam = z.object({
   event: z.string().min(1).max(48),
@@ -83,6 +83,7 @@ adminRouter.get(
         fullName: schema.users.fullName,
         isActive: schema.users.isActive,
         isEmailVerified: schema.users.isEmailVerified,
+        deletedAt: schema.users.deletedAt,
         lastLoginAt: schema.users.lastLoginAt,
         createdAt: schema.users.createdAt,
       })
@@ -105,6 +106,7 @@ adminRouter.get(
         fullName: row.fullName,
         isActive: row.isActive,
         isEmailVerified: row.isEmailVerified,
+        deletedAt: row.deletedAt?.toISOString() ?? null,
         roles: roleRows
           .filter((role) => role.userId === row.id)
           .map((role) => role.code as (typeof USER_ROLES)[number]),
@@ -345,6 +347,11 @@ adminRouter.patch(
       .limit(1);
     if (!existing) throw notFound("User not found");
 
+    // A deleted (soft-deleted) account cannot be reactivated here.
+    if (existing.deletedAt && req.body.isActive === true) {
+      throw forbidden("Deleted accounts cannot be reactivated. Undelete by clearing the deleted_at column.");
+    }
+
     const currentRoles = await db
       .select({ code: schema.userRoles.roleCode })
       .from(schema.userRoles)
@@ -534,7 +541,10 @@ adminRouter.delete(
       return;
     }
 
-    // Check for active cases where this user is the verifier or reviewer
+    // Prevent deletion of users who carry active workloads. A candidate's
+    // verification case is linked via candidate_profiles (not directly to
+    // users), so soft-deleting a candidate does not orphan any case. Verifiers
+    // or reviewers who are currently assigned, however, must be re-assigned first.
     const activeCases = await db
       .select({ id: schema.bgvCases.id })
       .from(schema.bgvCases)
@@ -547,7 +557,7 @@ adminRouter.delete(
       .limit(1);
     if (activeCases.length > 0) {
       throw validationError(
-        "This user is assigned to cases. Reassign them first before deleting.",
+        "This user is assigned to active cases. Reassign them before deleting.",
       );
     }
 

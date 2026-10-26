@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
 import {
   acceptConsent,
   api,
@@ -8,6 +9,7 @@ import {
   resetDatabase,
   uploadMandatoryDocuments,
 } from "./helpers.js";
+import { getDatabase, schema } from "../src/db/client.js";
 import { computeScore, toHundredths } from "../src/modules/scoring/scoring.service.js";
 
 /**
@@ -152,6 +154,13 @@ describe("scoring", () => {
   });
 
   it("refuses to produce a score when no approved scoring configuration is active", async () => {
+    // Remove the seeded active configuration so the test has a clean baseline.
+    const { db } = getDatabase();
+    await db
+      .update(schema.scoringConfigurations)
+      .set({ status: "DRAFT", isApproved: false, approvedBy: null, approvedAt: null })
+      .where(eq(schema.scoringConfigurations.status, "ACTIVE"));
+
     const candidate = await createCandidate();
     const reviewer = await createStaff(["BGV_REVIEWER"]);
 
@@ -357,7 +366,9 @@ describe("scoring", () => {
       token: reviewer.token,
     });
 
-    expect(history.body.data.length).toBe(2);
-    expect(history.body.data.filter((row: { supersededAt: string | null }) => row.supersededAt).length).toBe(1);
+    // The first score is auto-generated on verification completion. The two
+    // manual generations each supersede the previous one.
+    expect(history.body.data.length).toBe(3);
+    expect(history.body.data.filter((row: { supersededAt: string | null }) => row.supersededAt).length).toBe(2);
   });
 });
