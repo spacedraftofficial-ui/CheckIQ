@@ -27,7 +27,7 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
       .where(eq(schema.users.id, payload.sub))
       .limit(1);
 
-    if (!user || !user.isActive) {
+    if (!user || !user.isActive || user.deletedAt) {
       throw unauthenticated("Your account is not active");
     }
     if (user.sessionEpoch !== payload.sessionEpoch) {

@@ -15,7 +15,7 @@ import { getDatabase, schema } from "../../db/client.js";
 import { body, param } from "../../lib/request.js";
 import { requirePermission, requirePrincipal } from "../../middleware/authenticate.js";
 import { validate } from "../../middleware/validate.js";
-import { conflict, notFound, validationError } from "../../lib/errors.js";
+import { conflict, forbidden, notFound, validationError } from "../../lib/errors.js";
 import { newId } from "../../lib/ids.js";
 import { recordAudit } from "../../services/audit.service.js";
 import { queueNotification } from "../../services/notification.service.js";
@@ -25,6 +25,7 @@ import { USER_ROLES } from "@checkiq/contracts";
 export const adminRouter = Router();
 
 const idParam = z.object({ id: z.string().uuid() });
+const deleteUserBody = z.object({ reason: z.string().trim().max(1000).optional() });
 const configParam = z.object({ key: z.string().min(1).max(96) });
 const templateParam = z.object({
   event: z.string().min(1).max(48),
@@ -151,6 +152,7 @@ adminRouter.get(
         lastLoginAt: schema.users.lastLoginAt,
         createdAt: schema.users.createdAt,
         updatedAt: schema.users.updatedAt,
+        deletedAt: schema.users.deletedAt,
       })
       .from(schema.users)
       .where(eq(schema.users.id, userId))
@@ -224,6 +226,7 @@ adminRouter.get(
         lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
         createdAt: user.createdAt.toISOString(),
         updatedAt: user.updatedAt.toISOString(),
+        deletedAt: user.deletedAt?.toISOString() ?? null,
         roles: activeRoles.map((row) => row.code as (typeof USER_ROLES)[number]),
         revokedRoles: revokedRoles.map((row) => ({
           code: row.code as (typeof USER_ROLES)[number],
@@ -496,6 +499,88 @@ adminRouter.post(
     });
 
     res.status(200).json({ data: { id: user.id, emailVerified: true } });
+  },
+);
+
+/**
+ * DELETE /api/admin/users/:id
+ *
+ * Soft-deletes a user account. The row is retained (deleted_at is set) so
+ * that audit events remain valid, but the user can no longer authenticate.
+ * Only a SUPER_ADMINISTRATOR may delete users, and an administrator cannot
+ * delete their own account.
+ */
+adminRouter.delete(
+  "/admin/users/:id",
+  requirePrincipal,
+  requirePermission("user:manage"),
+  validate({ params: idParam, body: deleteUserBody }),
+  async (req, res) => {
+    const { db } = getDatabase();
+    const userId = param(req, "id");
+
+    if (userId === req.principal!.userId) {
+      throw forbidden("You cannot delete your own account");
+    }
+
+    const [user] = await db
+      .select({ id: schema.users.id, isActive: schema.users.isActive, deletedAt: schema.users.deletedAt })
+      .from(schema.users)
+      .where(eq(schema.users.id, userId))
+      .limit(1);
+    if (!user) throw notFound("User not found");
+    if (user.deletedAt) {
+      res.status(200).json({ data: { id: user.id, deleted: false } });
+      return;
+    }
+
+    // Check for active cases where this user is the verifier or reviewer
+    const activeCases = await db
+      .select({ id: schema.bgvCases.id })
+      .from(schema.bgvCases)
+      .where(
+        or(
+          eq(schema.bgvCases.assignedVerifierId, userId),
+          eq(schema.bgvCases.assignedReviewerId, userId),
+        ),
+      )
+      .limit(1);
+    if (activeCases.length > 0) {
+      throw validationError(
+        "This user is assigned to cases. Reassign them first before deleting.",
+      );
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(schema.users)
+        .set({
+          isActive: false,
+          deletedAt: new Date(),
+          sessionEpoch: sql`${schema.users.sessionEpoch} + 1`,
+        })
+        .where(eq(schema.users.id, userId));
+
+      await recordAudit(
+        {
+          action: "USER_DELETED",
+          actorId: req.principal!.userId,
+          actorName: req.principal!.fullName,
+          actorRole: req.principal!.roles[0] ?? null,
+          entityType: "user",
+          entityId: user.id,
+          previousValue: { isActive: user.isActive },
+          newValue: { isActive: false, deletedAt: new Date().toISOString() },
+          reason: req.body.reason ?? "Account deleted by administrator",
+          ipAddress: req.ipAddress ?? null,
+          userAgent: req.userAgent ?? null,
+          requestId: req.requestId,
+        },
+        tx,
+      );
+    });
+
+    res.status(200).json({ data: { id: user.id, deleted: true } });
   },
 );
 

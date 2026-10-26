@@ -37,6 +37,12 @@ export const users = mysqlTable(
     lastLoginAt: timestamp("last_login_at", { mode: "date" }),
     createdAt: timestamp("created_at", { mode: "date", fsp: 3 }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow().onUpdateNow(),
+    /**
+     * Set when an administrator deletes the account. The row is retained
+     * (not hard-deleted) so that audit events remain valid, but the user
+     * cannot authenticate.
+     */
+    deletedAt: timestamp("deleted_at", { mode: "date", fsp: 3 }),
   },
   (t) => [
     uniqueIndex("uq_users_email_normalized").on(t.emailNormalized),

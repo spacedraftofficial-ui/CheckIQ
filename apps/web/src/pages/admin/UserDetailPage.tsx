@@ -1,6 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Mail, ShieldCheck, ToggleLeft, ToggleRight } from "lucide-react";
+import { Trash2, ArrowLeft, Mail, ShieldCheck, ToggleLeft, ToggleRight } from "lucide-react";
 import { ApiError, request } from "../../lib/api";
 import { ErrorState, InlineError, LoadingBlock, StatusBadge } from "../../components/States";
 
@@ -10,6 +10,7 @@ interface UserDetail {
   fullName: string;
   mobile: string;
   isActive: boolean;
+  deletedAt: string | null;
   isEmailVerified: boolean;
   mustChangePassword: boolean;
   failedLoginAttempts: number;
@@ -84,6 +85,18 @@ export function UserDetailPage() {
     },
   });
 
+  const deleteUser = useMutation({
+    mutationFn: (reason: string | undefined) =>
+      request(`/admin/users/${id}`, {
+        method: "DELETE",
+        body: { reason },
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin", "user", id] });
+    },
+  });
+
   if (!id) return <ErrorState title="No user ID provided" message="The user ID is missing from the URL." />;
   if (user.isLoading) return <LoadingBlock label="Loading user" />;
   if (user.isError) {
@@ -124,13 +137,30 @@ export function UserDetailPage() {
                 <ToggleLeft className="h-4 w-4" aria-hidden={true} />
                 Disable
               </>
-            ) : (
-              <>
-                <ToggleRight className="h-4 w-4" aria-hidden={true} />
-                Activate
-              </>
-            )}
-          </button>
+             ) : (
+               <>
+                 <ToggleRight className="h-4 w-4" aria-hidden={true} />
+                 Activate
+               </>
+             )}
+           </button>
+           {!data.deletedAt && (
+             <button
+               type="button"
+               className="btn-danger"
+               onClick={() => {
+                 const reason = window.prompt(
+                   "Delete this user? Enter a reason (or leave blank):",
+                   "",
+                 );
+                 if (reason === null) return;
+                 void deleteUser.mutate(reason || undefined);
+               }}
+             >
+               <Trash2 className="h-4 w-4" aria-hidden={true} />
+               Delete
+             </button>
+           )}
         </div>
       </header>
 

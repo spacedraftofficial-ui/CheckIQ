@@ -36,6 +36,13 @@
       "when": 1792827015735,
       "tag": "0005_steep_earthquake",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1793144000000,
+      "tag": "0006_user_deletion",
+      "breakpoints": true
     }
   ]
 }
