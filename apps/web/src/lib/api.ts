@@ -138,3 +138,27 @@ export function toQueryString(params: Record<string, unknown>): string {
   const query = search.toString();
   return query ? `?${query}` : "";
 }
+
+/** Fetches a binary blob with auth headers — used for document downloads/views. */
+export async function apiBlob(path: string): Promise<Blob> {
+  const headers: Record<string, string> = {};
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: "GET",
+    headers,
+    credentials: "same-origin",
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    const payload = safeParse(text);
+    throw new ApiError(
+      response.status,
+      (payload as ApiErrorBody | null) ?? {
+        error: { code: "UNKNOWN", message: response.statusText },
+      },
+    );
+  }
+  return await response.blob();
+}

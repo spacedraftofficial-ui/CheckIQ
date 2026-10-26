@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Eye, History, ShieldCheck, X, CheckCircle } from "lucide-react";
-import { ApiError, request } from "../../lib/api";
+import { ApiError, apiBlob, request } from "../../lib/api";
 import { EmptyState, ErrorState, LoadingBlock, StatusBadge } from "../../components/States";
 
 interface CaseDetail {
@@ -84,6 +84,37 @@ export function CaseDetailPage() {
   const { caseId } = useParams<{ caseId: string }>();
   const queryClient = useQueryClient();
   const [versionsFor, setVersionsFor] = useState<string | null>(null);
+  const [docError, setDocError] = useState<string | null>(null);
+
+  const viewDocument = async (documentId: string, versionId: string) => {
+    setDocError(null);
+    try {
+      const blob = await apiBlob(`/documents/${documentId}/versions/${versionId}/view`);
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      setDocError(err instanceof ApiError ? err.message : "Failed to open document");
+    }
+  };
+
+  const downloadDocument = async (documentId: string, versionId: string, filename: string) => {
+    setDocError(null);
+    try {
+      const blob = await apiBlob(`/documents/${documentId}/versions/${versionId}/download`);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setDocError(err instanceof ApiError ? err.message : "Failed to download document");
+    }
+  };
 
   const detail = useQuery({
     queryKey: ["ops", "case", caseId],
@@ -292,8 +323,21 @@ export function CaseDetailPage() {
         )}
       </section>
 
-      <section className="card p-5 sm:p-6">
-        <h2 className="text-base font-semibold text-ink-900">Documents</h2>
+        <section className="card p-5 sm:p-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold text-ink-900">Documents</h2>
+            <button
+              type="button"
+              className="btn-secondary text-xs"
+              onClick={() => documents.refetch()}
+              disabled={documents.isFetching}
+            >
+              Refresh
+            </button>
+          </div>
+          {docError ? (
+            <p className="mt-4 text-sm text-red-600">{docError}</p>
+          ) : null}
         {documents.isLoading ? (
           <div className="mt-4">
             <LoadingBlock label="Loading documents" />
@@ -346,23 +390,24 @@ export function CaseDetailPage() {
                 ) : null}
                 {document.currentVersion ? (
                   <>
-                    <a
+                    <button
+                      type="button"
                       className="btn-secondary text-xs"
-                      href={`/api/documents/${document.id}/versions/${document.currentVersion.id}/view`}
-                      target="_blank"
-                      rel="noreferrer"
+                      onClick={() => viewDocument(document.id, document.currentVersion!.id)}
                     >
                       <Eye className="h-4 w-4" aria-hidden={true} />
                       View
-                    </a>
-                    <a
+                    </button>
+                    <button
+                      type="button"
                       className="btn-secondary text-xs"
-                      href={`/api/documents/${document.id}/versions/${document.currentVersion.id}/download`}
-                      download
+                      onClick={() =>
+                        downloadDocument(document.id, document.currentVersion!.id, document.currentVersion!.originalFilename)
+                      }
                     >
                       <Download className="h-4 w-4" aria-hidden={true} />
                       Download
-                    </a>
+                    </button>
                   </>
                 ) : null}
               </li>
@@ -415,23 +460,24 @@ export function CaseDetailPage() {
                     {version.isCurrent && (
                       <span className="text-xs font-medium text-brand-700">Current</span>
                     )}
-                    <a
+                    <button
+                      type="button"
                       className="btn-secondary text-xs"
-                      href={`/api/documents/${versionsFor}/versions/${version.id}/view`}
-                      target="_blank"
-                      rel="noreferrer"
+                      onClick={() => viewDocument(versionsFor, version.id)}
                     >
                       <Eye className="h-4 w-4" aria-hidden={true} />
                       View
-                    </a>
-                    <a
+                    </button>
+                    <button
+                      type="button"
                       className="btn-secondary text-xs"
-                      href={`/api/documents/${versionsFor}/versions/${version.id}/download`}
-                      download
+                      onClick={() =>
+                        downloadDocument(versionsFor, version.id, version.originalFilename)
+                      }
                     >
                       <Download className="h-4 w-4" aria-hidden={true} />
                       Download
-                    </a>
+                    </button>
                   </li>
                 ))}
               </ul>
