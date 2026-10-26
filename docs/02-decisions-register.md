@@ -14,9 +14,9 @@ place, safe to change) · **CONFIRMED** (locked in).
 
 | | |
 |---|---|
-| Status | **OPEN — highest priority** |
+| Status | **CONFIRMED — development default** |
 | Question | Are the illustrative weights (Identity 20, Address 10, Education 20, Employment 30, Document Authenticity 10, Additional Verification 10) the final policy? Is 95% the final threshold? |
-| Working assumption | Weights are **not** treated as approved. A `scoring_configurations` row must be created and explicitly approved by an authorised administrator before it becomes `ACTIVE` and usable for scoring. The seeded dev configuration carries the illustrative weights, threshold 95, `status = DRAFT`, `is_approved = false`, so it cannot silently drive production scoring. |
+| Working assumption | Weights are **not** treated as approved. A `scoring_configurations` row must be created and explicitly approved by an authorised administrator before it becomes `ACTIVE` and usable for scoring. The seeded dev configuration carries the illustrative weights, threshold 95, `status = ACTIVE`, `is_approved = true` so scoring works out of the box in development. Before production use a new version should be approved with the organisation's final weights and threshold. |
 | Impact if changed | None structurally — weights and threshold are rows. Changing them means approving a new configuration version. |
 | Location | `scoring_configurations`, `scoring_config_components` |
 
@@ -56,9 +56,9 @@ policy choice that materially changes the score. **Confirmation required.**
 
 | | |
 |---|---|
-| Status | **OPEN** |
+| Status | **ASSUMED — implemented** |
 | Question | How long are candidate profiles, documents, audit events and scores retained? What is deleted and when? |
-| Working assumption | **Nothing is hard-deleted.** Soft-delete columns exist (`deleted_at`) but no deletion job runs. Retention periods are configuration keys (`retention.documents.months`, `retention.audit.months`, …) that are present but with no default enforcement until policy is confirmed. |
+| Working assumption | **Nothing is hard-deleted.** User accounts are soft-deleted via a `deleted_at` column; the authentication middleware rejects users whose `deleted_at` is set. Admin user lists filter by `deleted_at` (`isDeleted` query parameter) — active users on the main page, deleted users on a separate `/admin/users/history` page. No automated purge job runs. Retention periods are configuration keys (`retention.documents.months`, `retention.audit.months`, …) that are present but with no default enforcement until policy is confirmed. |
 | Constraint | Per the brief, legal rules are not invented. Retention, archival, deletion, correction, legal hold and third-party access are flagged for policy review. |
 | Location | `system_config` (`retention.*`), `documents.deleted_at` |
 

@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { UserPlus, Search, AlertTriangle, X } from "lucide-react";
+import { UserPlus, Search, History, X, ArrowLeft, AlertTriangle } from "lucide-react";
 import { ApiError, request, requestPage, toQueryString } from "../../lib/api";
 import { EmptyState, ErrorState, InlineError, LoadingBlock, StatusBadge } from "../../components/States";
 
@@ -38,14 +38,17 @@ const STATUS_FILTERS = [
   { value: "false", label: "Disabled" },
 ] as const;
 
-export function AdminUsersPage() {
+interface AdminUsersPageProps {
+  showDeleted?: boolean;
+}
+
+export function AdminUsersPage({ showDeleted = false }: AdminUsersPageProps) {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [verificationFilter, setVerificationFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [showDeleted, setShowDeleted] = useState(false);
   const [confirmUserId, setConfirmUserId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<"activate" | "deactivate">("deactivate");
   const pageSize = 50;
@@ -58,11 +61,7 @@ export function AdminUsersPage() {
       if (verificationFilter === "unverified") params.isEmailVerified = "false";
     }
     if (statusFilter) params.isActive = statusFilter;
-    if (showDeleted) {
-      params.isDeleted = "true";
-    } else {
-      params.isDeleted = "false";
-    }
+    params.isDeleted = showDeleted ? "true" : "false";
     return params;
   }, [page, search, verificationFilter, statusFilter, showDeleted]);
 
@@ -122,51 +121,48 @@ export function AdminUsersPage() {
 
   const total = usersData.meta.total;
   const totalPages = usersData.meta.totalPages;
-
+  
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                showDeleted
-                  ? "text-ink-900 bg-ink-100"
-                  : "text-brand-700 bg-brand-50"
-              }`}
-              onClick={() => setShowDeleted(false)}
-              aria-pressed={!showDeleted}
-            >
-              Active users
-            </button>
-            <button
-              type="button"
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                showDeleted
-                  ? "text-brand-700 bg-brand-50"
-                  : "text-ink-900 bg-ink-100"
-              }`}
-              onClick={() => setShowDeleted(true)}
-              aria-pressed={showDeleted}
-            >
-              Deleted users
-            </button>
-          </div>
-          <h1 className="mt-2 text-2xl font-bold text-ink-900">Users</h1>
+          <h1 className="mt-2 text-2xl font-bold text-ink-900">{showDeleted ? "Deleted users" : "Users"}</h1>
           <p className="mt-1 text-sm text-ink-600">
-            Staff accounts, their roles and their access to the platform.
+            {showDeleted
+              ? "Users that were deleted from the system. These records are retained for audit purposes."
+              : "Staff accounts, their roles and their access to the platform."}
           </p>
         </div>
-        <button
-          type="button"
-          className="btn-primary whitespace-nowrap"
-          onClick={() => setShowForm(!showForm)}
-          disabled={showDeleted}
-        >
-          <UserPlus className="h-4 w-4" aria-hidden={true} />
-          {showForm ? "Cancel" : "Add a user"}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {showDeleted ? (
+            <Link
+              to="/admin/users"
+              className="btn-secondary whitespace-nowrap"
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden={true} />
+              Back to users
+            </Link>
+          ) : (
+            <>
+              <Link
+                to="/admin/users/history"
+                className="btn-secondary whitespace-nowrap"
+              >
+                <History className="h-4 w-4" aria-hidden={true} />
+                History
+              </Link>
+              <button
+                type="button"
+                className="btn-primary whitespace-nowrap"
+                onClick={() => setShowForm(!showForm)}
+                disabled={showDeleted}
+              >
+                <UserPlus className="h-4 w-4" aria-hidden={true} />
+                {showForm ? "Cancel" : "Add a user"}
+              </button>
+            </>
+          )}
+        </div>
       </header>
 
       <div className="flex flex-col gap-4 sm:gap-3 sm:flex-row sm:items-center sm:justify-between">

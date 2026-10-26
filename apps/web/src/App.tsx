@@ -183,21 +183,29 @@ export function App() {
         />
 
          <Route
-           path="/admin/users"
-           element={
-             <RequireAuth roles={["ADMINISTRATOR", "SUPER_ADMINISTRATOR"]}>
-               <AdminUsersPage />
-             </RequireAuth>
-           }
-         />
-         <Route
-           path="/admin/users/:id"
-           element={
-             <RequireAuth roles={["ADMINISTRATOR", "SUPER_ADMINISTRATOR"]}>
-               <UserDetailPage />
-             </RequireAuth>
-           }
-         />
+            path="/admin/users"
+            element={
+              <RequireAuth roles={["ADMINISTRATOR", "SUPER_ADMINISTRATOR"]}>
+                <AdminUsersPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/admin/users/history"
+            element={
+              <RequireAuth roles={["ADMINISTRATOR", "SUPER_ADMINISTRATOR"]}>
+                <AdminUsersPage showDeleted={true} />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/admin/users/:id"
+            element={
+              <RequireAuth roles={["ADMINISTRATOR", "SUPER_ADMINISTRATOR"]}>
+                <UserDetailPage />
+              </RequireAuth>
+            }
+          />
         <Route
           path="/admin/config"
           element={

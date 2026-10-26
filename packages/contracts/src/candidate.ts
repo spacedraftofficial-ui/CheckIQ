@@ -18,8 +18,16 @@ function optionalString(max: number) {
 
 function optionalDate() {
   return z
-    .iso
-    .date()
+    .union([z.iso.date(), z.literal("")])
+    .transform((val) => (val === "" ? null : val))
+    .nullish()
+    .optional()
+    .nullable();
+}
+
+function optionalEmail() {
+  return z
+    .union([z.string().email().max(254), z.literal("")])
     .transform((val) => (val === "" ? null : val))
     .nullish()
     .optional()
@@ -58,14 +66,7 @@ export const employmentSchema = z.object({
   toDate: optionalDate(),
   isCurrent: z.boolean(),
   contactName: optionalString(160),
-  contactEmail: z
-    .string()
-    .email()
-    .max(254)
-    .transform((val) => (val === "" ? null : val))
-    .nullish()
-    .optional()
-    .nullable(),
+  contactEmail: optionalEmail(),
   contactMobile: optionalString(32),
 });
 export type Employment = z.infer<typeof employmentSchema>;

@@ -6,57 +6,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Save } from "lucide-react";
 import { request, ApiError } from "../../lib/api";
 import { ErrorState, InlineError, LoadingBlock } from "../../components/States";
+import { updateProfileSchema } from "@checkiq/contracts";
 
-const addressSchema = z.object({
-  type: z.enum(["CURRENT", "PERMANENT", "OTHER"]),
-  line1: z.string().trim().min(1, "Address line 1 is required").max(200),
-  line2: z.string().trim().max(200).optional(),
-  city: z.string().trim().min(1, "City is required").max(120),
-  state: z.string().trim().min(1, "State is required").max(120),
-  country: z.string().trim().min(1, "Country is required").max(120),
-  postalCode: z.string().trim().max(20).optional(),
-});
-
-const educationSchema = z.object({
-  qualification: z.string().trim().min(1, "Qualification is required").max(200),
-  institution: z.string().trim().min(1, "Institution is required").max(200),
-  universityOrBoard: z.string().trim().max(200).optional(),
-  registrationNumber: z.string().trim().max(100).optional(),
-  yearOfPassing: z
-    .number({ error: "Enter a valid year" })
-    .int("Enter a valid year")
-    .min(1900, "Enter a valid year")
-    .max(new Date().getFullYear() + 1, "Enter a valid year"),
-  scoreOrPercentage: z.string().trim().max(50).optional(),
-});
-
-const employmentSchema = z.object({
-  employer: z.string().trim().min(1, "Employer is required").max(200),
-  designation: z.string().trim().min(1, "Designation is required").max(200),
-  employeeId: z.string().trim().max(100).optional(),
-  fromDate: z.string().min(1, "Start date is required"),
-  toDate: z.string().optional(),
-  isCurrent: z.boolean(),
-  contactName: z.string().trim().max(160).optional(),
-  contactEmail: z.union([z.literal(""), z.email("Enter a valid email address")]).optional(),
-  contactMobile: z.string().trim().max(32).optional(),
-});
-
-const profileSchema = z.object({
-  fullName: z.string().trim().min(2, "Full name is required").max(160),
-  dateOfBirth: z.string().optional(),
-  gender: z.string().optional(),
-  email: z.email("Enter a valid email address"),
-  mobile: z.string().trim().regex(/^\+?[0-9][0-9\s-]{6,19}$/, "Enter a valid mobile number"),
-  pan: z.string().trim().max(20).optional(),
-  passportNumber: z.string().trim().max(40).optional(),
-  drivingLicenceNumber: z.string().trim().max(40).optional(),
-  addresses: z.array(addressSchema),
-  education: z.array(educationSchema),
-  employments: z.array(employmentSchema),
-});
-
-type ProfileForm = z.infer<typeof profileSchema>;
+type ProfileForm = z.input<typeof updateProfileSchema>;
 
 interface ProfileResponse {
   candidateId: string;
@@ -67,10 +19,11 @@ interface ProfileResponse {
   mobile: string;
   pan: string | null;
   passportNumber: string | null;
+  passportExpiry: string | null;
   drivingLicenceNumber: string | null;
   addresses: { id?: string; type: string; line1: string; line2?: string | null; city: string; state: string; country: string; postalCode?: string | null }[];
   education: { id?: string; qualification: string; institution: string; universityOrBoard?: string | null; registrationNumber?: string | null; yearOfPassing: number; scoreOrPercentage?: string | null }[];
-  employments: { id?: string; employer: string; designation: string; employeeId?: string | null; fromDate: string; toDate?: string | null; isCurrent: boolean; contactName?: string | null; contactEmail?: string | null; contactMobile?: string | null }[];
+    employments: { id?: string; employer: string; designation: string; employeeId?: string | null; fromDate: string; toDate?: string | null; isCurrent: boolean; contactName?: string | null; contactEmail?: string | null; contactMobile?: string | null }[];
   profileCompleted: boolean;
 }
 
@@ -88,7 +41,7 @@ export function ProfilePage() {
     control,
     formState: { errors, isSubmitting },
   } = useForm<ProfileForm>({
-    resolver: zodResolver(profileSchema),
+    resolver: zodResolver(updateProfileSchema),
     defaultValues: {
       addresses: [],
       education: [],
@@ -101,13 +54,15 @@ export function ProfilePage() {
     reset({
       fullName: query.data.fullName,
       dateOfBirth: query.data.dateOfBirth ?? "",
-      gender: query.data.gender ?? "",
+       gender: (query.data.gender ?? "") as ProfileForm["gender"],
       email: query.data.email,
       mobile: query.data.mobile,
-      pan: query.data.pan ?? "",
+       pan: query.data.pan ?? "",
       passportNumber: query.data.passportNumber ?? "",
+      passportExpiry: query.data.passportExpiry ?? "",
       drivingLicenceNumber: query.data.drivingLicenceNumber ?? "",
       addresses: query.data.addresses.map((a) => ({
+        id: a.id,
         type: a.type as "CURRENT" | "PERMANENT" | "OTHER",
         line1: a.line1,
         line2: a.line2 ?? "",
@@ -117,6 +72,7 @@ export function ProfilePage() {
         postalCode: a.postalCode ?? "",
       })),
       education: query.data.education.map((e) => ({
+        id: e.id,
         qualification: e.qualification,
         institution: e.institution,
         universityOrBoard: e.universityOrBoard ?? "",
@@ -125,10 +81,11 @@ export function ProfilePage() {
         scoreOrPercentage: e.scoreOrPercentage ?? "",
       })),
       employments: query.data.employments.map((e) => ({
+        id: e.id,
         employer: e.employer,
         designation: e.designation,
         employeeId: e.employeeId ?? "",
-        fromDate: e.fromDate,
+        fromDate: e.fromDate ?? "",
         toDate: e.toDate ?? "",
         isCurrent: e.isCurrent,
         contactName: e.contactName ?? "",
@@ -225,6 +182,13 @@ export function ProfilePage() {
               Passport number <span className="font-normal text-ink-500">(optional)</span>
             </label>
             <input id="passportNumber" className="input" {...register("passportNumber")} />
+          </div>
+          <div>
+            <label className="label" htmlFor="passportExpiry">
+              Passport expiry <span className="font-normal text-ink-500">(optional)</span>
+            </label>
+            <input id="passportExpiry" type="date" className="input" {...register("passportExpiry")} />
+            <InlineError message={errors.passportExpiry?.message} />
           </div>
           <div>
             <label className="label" htmlFor="drivingLicenceNumber">
