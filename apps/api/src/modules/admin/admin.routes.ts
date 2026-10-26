@@ -57,6 +57,13 @@ adminRouter.get(
     if (filters.isActive !== undefined) {
       conditions.push(eq(schema.users.isActive, filters.isActive));
     }
+    if (filters.isDeleted !== undefined) {
+      if (filters.isDeleted) {
+        conditions.push(sql`deleted_at IS NOT NULL`);
+      } else {
+        conditions.push(isNull(schema.users.deletedAt));
+      }
+    }
     if (filters.role) {
       conditions.push(
         eq(

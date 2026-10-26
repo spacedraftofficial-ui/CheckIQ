@@ -45,6 +45,7 @@ export function AdminUsersPage() {
   const [page, setPage] = useState(1);
   const [verificationFilter, setVerificationFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [showDeleted, setShowDeleted] = useState(false);
   const [confirmUserId, setConfirmUserId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<"activate" | "deactivate">("deactivate");
   const pageSize = 50;
@@ -57,8 +58,13 @@ export function AdminUsersPage() {
       if (verificationFilter === "unverified") params.isEmailVerified = "false";
     }
     if (statusFilter) params.isActive = statusFilter;
+    if (showDeleted) {
+      params.isDeleted = "true";
+    } else {
+      params.isDeleted = "false";
+    }
     return params;
-  }, [page, search, verificationFilter, statusFilter]);
+  }, [page, search, verificationFilter, statusFilter, showDeleted]);
 
   const users = useQuery({
     queryKey: ["admin", "users", page, search, verificationFilter, statusFilter],
@@ -121,7 +127,33 @@ export function AdminUsersPage() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-ink-900">Users</h1>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                showDeleted
+                  ? "text-ink-900 bg-ink-100"
+                  : "text-brand-700 bg-brand-50"
+              }`}
+              onClick={() => setShowDeleted(false)}
+              aria-pressed={!showDeleted}
+            >
+              Active users
+            </button>
+            <button
+              type="button"
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                showDeleted
+                  ? "text-brand-700 bg-brand-50"
+                  : "text-ink-900 bg-ink-100"
+              }`}
+              onClick={() => setShowDeleted(true)}
+              aria-pressed={showDeleted}
+            >
+              Deleted users
+            </button>
+          </div>
+          <h1 className="mt-2 text-2xl font-bold text-ink-900">Users</h1>
           <p className="mt-1 text-sm text-ink-600">
             Staff accounts, their roles and their access to the platform.
           </p>
@@ -129,7 +161,8 @@ export function AdminUsersPage() {
         <button
           type="button"
           className="btn-primary whitespace-nowrap"
-          onClick={() => setShowForm((value) => !value)}
+          onClick={() => setShowForm(!showForm)}
+          disabled={showDeleted}
         >
           <UserPlus className="h-4 w-4" aria-hidden={true} />
           {showForm ? "Cancel" : "Add a user"}
@@ -166,15 +199,16 @@ export function AdminUsersPage() {
             ))}
           </select>
 
-          <select
-            className="input text-sm"
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-            }}
-            aria-label="Filter by account status"
-          >
+           <select
+             className="input text-sm"
+             value={statusFilter}
+             onChange={(e) => {
+               setStatusFilter(e.target.value);
+               setPage(1);
+             }}
+             aria-label="Filter by account status"
+             disabled={showDeleted}
+           >
             {STATUS_FILTERS.map((f) => (
               <option key={f.value} value={f.value}>
                 {f.label}
@@ -353,7 +387,7 @@ export function AdminUsersPage() {
           onClose={() => setConfirmUserId(null)}
           onConfirm={async () => {
             const user = (await queryClient.fetchQuery({
-              queryKey: ["admin", "users", page, search, verificationFilter, statusFilter],
+              queryKey: ["admin", "users", page, search, verificationFilter, statusFilter, showDeleted],
             })) as { data: AdminUser[] } | undefined;
             const target = user?.data.find((u) => u.id === confirmUserId);
             if (target) {

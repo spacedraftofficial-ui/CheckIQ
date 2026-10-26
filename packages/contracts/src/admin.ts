@@ -21,6 +21,10 @@ export const adminUserListSchema = paginationQuerySchema.extend({
     .enum(["true", "false"])
     .transform((v) => v === "true")
     .optional(),
+  isDeleted: z
+    .enum(["true", "false"])
+    .transform((v) => v === "true")
+    .optional(),
 });
 export type AdminUserListQuery = z.infer<typeof adminUserListSchema>;
 
