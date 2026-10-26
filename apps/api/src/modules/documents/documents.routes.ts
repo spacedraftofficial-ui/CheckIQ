@@ -332,9 +332,67 @@ documentsRouter.get(
 
     res.setHeader("Content-Type", version.mimeType);
     res.setHeader("Content-Length", String(version.sizeBytes));
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    const { createReadStream } = await import("node:fs");
+    createReadStream(filePath).pipe(res);
+  },
+);
+
+documentsRouter.get(
+  "/documents/:documentId/versions/:versionId/view",
+  requirePrincipal,
+  validate({ params: versionParams }),
+  async (req, res) => {
+    const { db } = getDatabase();
+    const [version] = await db
+      .select()
+      .from(schema.documentVersions)
+      .where(
+        and(
+          eq(schema.documentVersions.id, param(req, "versionId")),
+          eq(schema.documentVersions.documentId, param(req, "documentId")),
+        ),
+      )
+      .limit(1);
+    if (!version) throw notFound("Document version not found");
+
+    const [document] = await db
+      .select()
+      .from(schema.documents)
+      .where(eq(schema.documents.id, param(req, "documentId")))
+      .limit(1);
+    if (!document) throw notFound("Document not found");
+
+    await resolveCase(req.principal!, document.caseId);
+
+    if (!req.principal!.permissions.has("case:read:own" as never)) {
+      if (!req.principal!.permissions.has("verification:read" as never)) {
+        throw forbidden("You are not permitted to view this document");
+      }
+    }
+
+    const { resolveStoragePath } = await import("../../lib/storage.js");
+    const filePath = resolveStoragePath(version.storageKey);
+
+    await recordAudit({
+      action: "DOCUMENT_VIEWED",
+      actorId: req.principal!.userId,
+      actorName: req.principal!.fullName,
+      actorRole: req.principal!.roles[0] ?? null,
+      entityType: "document_version",
+      entityId: version.id,
+      caseId: document.caseId,
+      newValue: { documentId: document.id, versionNumber: version.versionNumber },
+      ipAddress: req.ipAddress ?? null,
+      userAgent: req.userAgent ?? null,
+      requestId: req.requestId,
+    });
+
+    res.setHeader("Content-Type", version.mimeType);
+    res.setHeader("Content-Length", String(version.sizeBytes));
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${encodeURIComponent(version.originalFilename)}"`,
+      `inline; filename="${encodeURIComponent(version.originalFilename)}"`,
     );
     res.setHeader("X-Content-Type-Options", "nosniff");
     const { createReadStream } = await import("node:fs");

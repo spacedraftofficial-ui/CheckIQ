@@ -211,8 +211,8 @@ export function OpsDashboard() {
                   <th scope="col" className="px-4 py-3">Position</th>
                   <th scope="col" className="px-4 py-3">Status</th>
                   <th scope="col" className="px-4 py-3">Verifier</th>
-                  <th scope="col" className="px-4 py-3">Score</th>
-                  <th scope="col" className="px-4 py-3">Docs</th>
+                   <th scope="col" className="px-4 py-3">Score (%)</th>
+                   <th scope="col" className="px-4 py-3">Documents</th>
                   <th scope="col" className="px-4 py-3">Updated</th>
                 </tr>
               </thead>

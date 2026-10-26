@@ -179,8 +179,11 @@ export function computeScore(
   }
 
   // Weighted mean over the components that apply, scaled to 100%. Rounded
-  // half-up to the nearest hundredth of a percent.
-  const totalHundredths = Math.round((weightedHundredths / eligibleWeight) * 10_000);
+  // half-up to the nearest hundredth of a percent. Clamped to [0, 10000] so
+  // that configuration errors or data corruption can never produce a score
+  // above 100% — a score must always be a valid percentage.
+  const rawHundredths = Math.round((weightedHundredths / eligibleWeight) * 10_000);
+  const totalHundredths = Math.max(0, Math.min(10_000, rawHundredths));
 
   const outcome: ComputedScore["outcome"] = provisional
     ? "PROVISIONAL"

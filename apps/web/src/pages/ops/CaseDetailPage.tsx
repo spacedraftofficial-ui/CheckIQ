@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, History, ShieldCheck, X, CheckCircle } from "lucide-react";
+import { Download, Eye, History, ShieldCheck, X, CheckCircle } from "lucide-react";
 import { ApiError, request } from "../../lib/api";
 import { EmptyState, ErrorState, LoadingBlock, StatusBadge } from "../../components/States";
 
@@ -345,14 +345,25 @@ export function CaseDetailPage() {
                   </button>
                 ) : null}
                 {document.currentVersion ? (
-                  <a
-                    className="btn-secondary text-xs"
-                    href={`/api/documents/${document.id}/versions/${document.currentVersion.id}/download`}
-                    download
-                  >
-                    <Download className="h-4 w-4" aria-hidden={true} />
-                    Download
-                  </a>
+                  <>
+                    <a
+                      className="btn-secondary text-xs"
+                      href={`/api/documents/${document.id}/versions/${document.currentVersion.id}/view`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <Eye className="h-4 w-4" aria-hidden={true} />
+                      View
+                    </a>
+                    <a
+                      className="btn-secondary text-xs"
+                      href={`/api/documents/${document.id}/versions/${document.currentVersion.id}/download`}
+                      download
+                    >
+                      <Download className="h-4 w-4" aria-hidden={true} />
+                      Download
+                    </a>
+                  </>
                 ) : null}
               </li>
             ))}
@@ -404,6 +415,15 @@ export function CaseDetailPage() {
                     {version.isCurrent && (
                       <span className="text-xs font-medium text-brand-700">Current</span>
                     )}
+                    <a
+                      className="btn-secondary text-xs"
+                      href={`/api/documents/${versionsFor}/versions/${version.id}/view`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <Eye className="h-4 w-4" aria-hidden={true} />
+                      View
+                    </a>
                     <a
                       className="btn-secondary text-xs"
                       href={`/api/documents/${versionsFor}/versions/${version.id}/download`}
