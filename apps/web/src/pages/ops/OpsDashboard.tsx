@@ -17,6 +17,7 @@ interface CaseListItem {
   assignedVerifierName: string | null;
   score: number | null;
   scoreOutcome: string | null;
+  documentCompletion: number;
   submittedAt: string | null;
   updatedAt: string;
 }
@@ -77,6 +78,7 @@ export function OpsDashboard() {
           pageSize: 25,
         })}`,
       ),
+    refetchInterval: 30_000,
   });
 
   return (
@@ -210,6 +212,7 @@ export function OpsDashboard() {
                   <th scope="col" className="px-4 py-3">Status</th>
                   <th scope="col" className="px-4 py-3">Verifier</th>
                   <th scope="col" className="px-4 py-3">Score</th>
+                  <th scope="col" className="px-4 py-3">Docs</th>
                   <th scope="col" className="px-4 py-3">Updated</th>
                 </tr>
               </thead>
@@ -244,6 +247,17 @@ export function OpsDashboard() {
                     </td>
                     <td className="px-4 py-3 text-ink-700">
                       {item.score === null ? "—" : `${item.score.toFixed(2)}%`}
+                    </td>
+                    <td className="px-4 py-3 text-ink-700">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{item.documentCompletion}%</span>
+                        <div className="w-12 h-2 bg-ink-200 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-brand-600 rounded-full transition-all"
+                            style={{ width: `${item.documentCompletion}%` }}
+                          />
+                        </div>
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-xs text-ink-500">
                       {new Date(item.updatedAt).toLocaleDateString()}

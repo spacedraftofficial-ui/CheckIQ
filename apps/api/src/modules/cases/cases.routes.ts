@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { and, asc, count, desc, eq, gte, inArray, like, lte, or, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, like, lte, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { caseFiltersSchema, submitCaseRequestSchema } from "@checkiq/contracts";
 import { getDatabase, schema } from "../../db/client.js";
@@ -143,6 +143,16 @@ casesRouter.get(
         scoreOutcome: schema.bgvCases.scoreOutcome,
         submittedAt: schema.bgvCases.submittedAt,
         updatedAt: schema.bgvCases.updatedAt,
+        documentCompletion: sql`COALESCE(
+          (SELECT COUNT(*) FROM ${schema.documents} WHERE ${schema.documents.caseId} = ${schema.bgvCases.id} AND ${schema.documents.status} != 'MISSING') * 100 /
+          NULLIF((SELECT COUNT(*) FROM ${schema.documentRequirements} WHERE ${schema.documentRequirements.packageId} = ${schema.bgvCases.packageId} AND ${schema.documentRequirements.isMandatory} = true), 0),
+          0
+        )`,
+        openClarificationCount: sql`COALESCE((
+          SELECT COUNT(*) FROM ${schema.clarificationRequests}
+          WHERE ${schema.clarificationRequests.caseId} = ${schema.bgvCases.id}
+            AND ${schema.clarificationRequests.status} IN ('OPEN', 'RESPONDED')
+        ), 0)`,
       })
       .from(schema.bgvCases)
       .innerJoin(
@@ -172,7 +182,8 @@ casesRouter.get(
         scoreOutcome: row.scoreOutcome,
         submittedAt: row.submittedAt?.toISOString() ?? null,
         updatedAt: row.updatedAt.toISOString(),
-        openClarificationCount: 0,
+        documentCompletion: row.documentCompletion ? Number(row.documentCompletion) : 0,
+        openClarificationCount: Number(row.openClarificationCount),
       })),
       meta: {
         page: filters.page,
@@ -638,3 +649,4 @@ casesRouter.post(
     res.status(200).json({ data: { assigned: true } });
   },
 );
+

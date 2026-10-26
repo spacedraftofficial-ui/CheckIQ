@@ -334,8 +334,8 @@ export async function signup(input: SignupRequest, context: RequestContext): Pro
         fullName: input.fullName.trim(),
         candidateId: normalisedCandidateId,
       });
-      // In development, return the verification code for testing convenience.
-      if (getConfig().NODE_ENV === "development") {
+      // In development and test, return the verification code for convenience.
+      if (getConfig().NODE_ENV === "development" || getConfig().NODE_ENV === "test") {
         verificationCode = result.code;
       }
     } catch (emailErr) {
@@ -348,7 +348,7 @@ export async function signup(input: SignupRequest, context: RequestContext): Pro
     email: input.email.trim(),
     fullName: input.fullName.trim(),
     requiresEmailVerification: verificationEnabled,
-    verificationCode: getConfig().NODE_ENV === "development" ? verificationCode : undefined,
+    verificationCode: getConfig().NODE_ENV === "development" || getConfig().NODE_ENV === "test" ? verificationCode : undefined,
   };
 }
 

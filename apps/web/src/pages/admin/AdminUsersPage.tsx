@@ -67,7 +67,7 @@ export function AdminUsersPage() {
   }, [page, search, verificationFilter, statusFilter, showDeleted]);
 
   const users = useQuery({
-    queryKey: ["admin", "users", page, search, verificationFilter, statusFilter],
+    queryKey: ["admin", "users", page, search, verificationFilter, statusFilter, showDeleted],
     queryFn: () => requestPage<AdminUser>(`/admin/users${toQueryString(searchParams)}`),
   });
 
