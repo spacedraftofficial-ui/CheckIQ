@@ -4,6 +4,7 @@ import { mkdir, rename, rm } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { getConfig } from "../config.js";
 import { uploadRejected } from "./errors.js";
+import { getLogger } from "./logger.js";
 
 /**
  * Private document storage.
@@ -31,8 +32,34 @@ export interface StoredObject {
   mimeType: string;
 }
 
-function storageRoot(): string {
-  return resolve(process.cwd(), getConfig().STORAGE_DIR);
+const logger = getLogger();
+
+/**
+ * Resolves the storage root directory.
+ *
+ * On Hostinger (or any platform that wipes the project directory on redeploy),
+ * a relative STORAGE_DIR like `./storage` is lost on every deploy. When we
+ * detect the Hostinger deploy marker and a relative STORAGE_DIR, we
+ * transparently relocate storage to a sibling directory of HOME
+ * (`~/checkiq-storage`) so uploaded files survive redeployments without any
+ * manual environment configuration.
+ */
+export function storageRoot(): string {
+  const configured = getConfig().STORAGE_DIR;
+  const resolved = resolve(process.cwd(), configured);
+
+  if (process.env.HOSTINGER_SOURCE_DIR && process.env.HOME) {
+    const persistentRoot = resolve(process.env.HOME, "checkiq-storage");
+    if (isAbsolute(configured)) return resolved;
+    if (persistentRoot !== resolved) {
+      logger.info(
+        { configured, persistent: persistentRoot },
+        "Relocating document storage to persistent path (relative STORAGE_DIR on Hostinger)",
+      );
+      return persistentRoot;
+    }
+  }
+  return resolved;
 }
 
 function tempRoot(): string {
@@ -107,7 +134,8 @@ export function resolveStoragePath(storageKey: string): string {
 
 /** Creates the storage directories at boot. */
 export async function ensureStorageDirectories(): Promise<void> {
-  await mkdir(storageRoot(), { recursive: true });
+  const root = storageRoot();
+  await mkdir(root, { recursive: true });
   await mkdir(tempRoot(), { recursive: true });
 }
 

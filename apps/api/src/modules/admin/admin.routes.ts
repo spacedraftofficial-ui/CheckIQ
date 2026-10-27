@@ -1,4 +1,4 @@
-import { Router } from "express";
+﻿import { Router } from "express";
 import { hash } from "@node-rs/argon2";
 import { and, asc, count, desc, eq, gte, isNull, like, lte, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
@@ -627,6 +627,7 @@ adminRouter.post(
       .where(eq(schema.users.id, userId))
       .limit(1);
     if (!user) throw notFound("User not found");
+    if (user.deletedAt) throw notFound("User not found");
 
     const temporaryPassword = generatePassword();
     const passwordHash = await hash(temporaryPassword, {
@@ -1211,3 +1212,4 @@ function generatePassword(): string {
   }
   return parts.sort(() => Math.random() - 0.5).join("");
 }
+
