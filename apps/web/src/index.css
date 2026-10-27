@@ -1,11 +1,11 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 /**
  * CheckIQ design tokens.
  *
  * A restrained palette: a single brand colour, semantic status colours that
  * meet WCAG AA contrast against their backgrounds, and neutral surfaces. No
- * sensitive value is ever rendered in a way that relies on colour alone —
+ * sensitive value is ever rendered in a way that relies on colour alone â€”
  * every status badge also carries its text label.
  */
 @theme {
@@ -81,6 +81,10 @@
   @apply btn text-ink-700 hover:bg-ink-100;
 }
 
+@utility btn-sm {
+  @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60;
+}
+
 @utility btn-outline {
   @apply btn border border-brand-300 bg-transparent text-brand-700 hover:bg-brand-50;
 }
@@ -110,3 +114,4 @@
     @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
   }
 }
+

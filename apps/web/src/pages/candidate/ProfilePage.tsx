@@ -1,11 +1,11 @@
-import { useEffect } from "react";
+﻿import { useEffect } from "react";
 import { useFieldArray, useForm, type Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { z } from "zod";
 import { Save } from "lucide-react";
 import { request, ApiError } from "../../lib/api";
-import { ErrorState, InlineError, LoadingBlock } from "../../components/States";
+import { InlineError, ErrorState, LoadingBlock } from "../../components/States";
 import { updateProfileSchema } from "@checkiq/contracts";
 
 type ProfileForm = z.input<typeof updateProfileSchema>;
@@ -54,7 +54,7 @@ export function ProfilePage() {
     reset({
       fullName: query.data.fullName,
       dateOfBirth: query.data.dateOfBirth ?? "",
-       gender: (query.data.gender ?? "") as ProfileForm["gender"],
+     gender: (query.data.gender ?? "") as ProfileForm["gender"],
       email: query.data.email,
       mobile: query.data.mobile,
        pan: query.data.pan ?? "",
@@ -121,8 +121,8 @@ export function ProfilePage() {
       noValidate
     >
       <header>
-        <h1 className="text-2xl font-bold text-ink-900">My profile</h1>
-        <p className="mt-1 text-sm text-ink-600">
+        <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">My profile</h1>
+        <p className="mt-1.5 text-sm text-ink-600">
           Only the details required for your background verification package are collected.
         </p>
       </header>
@@ -156,7 +156,7 @@ export function ProfilePage() {
               <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
             </select>
           </div>
-          <div>
+          <div className="sm:col-span-2">
             <label className="label" htmlFor="email">
               Email address
             </label>
@@ -190,7 +190,7 @@ export function ProfilePage() {
             <input id="passportExpiry" type="date" className="input" {...register("passportExpiry")} />
             <InlineError message={errors.passportExpiry?.message} />
           </div>
-          <div>
+          <div className="sm:col-span-2">
             <label className="label" htmlFor="drivingLicenceNumber">
               Driving licence number <span className="font-normal text-ink-500">(optional)</span>
             </label>
@@ -204,13 +204,13 @@ export function ProfilePage() {
         description="Your current address is required. Add your permanent address if it is different."
         addLabel="Add an address"
         render={(index) => (
-          <div className="grid gap-3 rounded-lg border border-ink-200 p-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="label" htmlFor={`address-type-${index}`}>
+              <label className="label" htmlFor={"address-type-" + index}>
                 Type
               </label>
               <select
-                id={`address-type-${index}`}
+                id={"address-type-" + index}
                 className="input"
                 {...register(`addresses.${index}.type` as const)}
               >
@@ -220,61 +220,61 @@ export function ProfilePage() {
               </select>
             </div>
             <div className="sm:col-span-2">
-              <label className="label" htmlFor={`address-line1-${index}`}>
+              <label className="label" htmlFor={"address-line1-" + index}>
                 Address line 1
               </label>
               <input
-                id={`address-line1-${index}`}
+                id={"address-line1-" + index}
                 className="input"
                 {...register(`addresses.${index}.line1` as const)}
               />
             </div>
             <div className="sm:col-span-2">
-              <label className="label" htmlFor={`address-line2-${index}`}>
+              <label className="label" htmlFor={"address-line2-" + index}>
                 Address line 2 <span className="font-normal text-ink-500">(optional)</span>
               </label>
               <input
-                id={`address-line2-${index}`}
+                id={"address-line2-" + index}
                 className="input"
                 {...register(`addresses.${index}.line2` as const)}
               />
             </div>
             <div>
-              <label className="label" htmlFor={`address-city-${index}`}>
+              <label className="label" htmlFor={"address-city-" + index}>
                 City
               </label>
               <input
-                id={`address-city-${index}`}
+                id={"address-city-" + index}
                 className="input"
                 {...register(`addresses.${index}.city` as const)}
               />
             </div>
             <div>
-              <label className="label" htmlFor={`address-state-${index}`}>
+              <label className="label" htmlFor={"address-state-" + index}>
                 State
               </label>
               <input
-                id={`address-state-${index}`}
+                id={"address-state-" + index}
                 className="input"
                 {...register(`addresses.${index}.state` as const)}
               />
             </div>
             <div>
-              <label className="label" htmlFor={`address-country-${index}`}>
+              <label className="label" htmlFor={"address-country-" + index}>
                 Country
               </label>
               <input
-                id={`address-country-${index}`}
+                id={"address-country-" + index}
                 className="input"
                 {...register(`addresses.${index}.country` as const)}
               />
             </div>
             <div>
-              <label className="label" htmlFor={`address-postal-${index}`}>
+              <label className="label" htmlFor={"address-postal-" + index}>
                 Postal code
               </label>
               <input
-                id={`address-postal-${index}`}
+                id={"address-postal-" + index}
                 className="input"
                 {...register(`addresses.${index}.postalCode` as const)}
               />
@@ -299,64 +299,64 @@ export function ProfilePage() {
         description="Add the qualifications the verification team needs to confirm."
         addLabel="Add a qualification"
         render={(index) => (
-          <div className="grid gap-3 rounded-lg border border-ink-200 p-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="label" htmlFor={`edu-qualification-${index}`}>
+              <label className="label" htmlFor={"edu-qualification-" + index}>
                 Qualification
               </label>
               <input
-                id={`edu-qualification-${index}`}
+                id={"edu-qualification-" + index}
                 className="input"
                 {...register(`education.${index}.qualification` as const)}
               />
             </div>
             <div>
-              <label className="label" htmlFor={`edu-institution-${index}`}>
+              <label className="label" htmlFor={"edu-institution-" + index}>
                 Institution
               </label>
               <input
-                id={`edu-institution-${index}`}
+                id={"edu-institution-" + index}
                 className="input"
                 {...register(`education.${index}.institution` as const)}
               />
             </div>
             <div>
-              <label className="label" htmlFor={`edu-board-${index}`}>
+              <label className="label" htmlFor={"edu-board-" + index}>
                 University / board
               </label>
               <input
-                id={`edu-board-${index}`}
+                id={"edu-board-" + index}
                 className="input"
                 {...register(`education.${index}.universityOrBoard` as const)}
               />
             </div>
             <div>
-              <label className="label" htmlFor={`edu-registration-${index}`}>
+              <label className="label" htmlFor={"edu-registration-" + index}>
                 Registration number
               </label>
               <input
-                id={`edu-registration-${index}`}
+                id={"edu-registration-" + index}
                 className="input"
                 {...register(`education.${index}.registrationNumber` as const)}
               />
             </div>
             <div>
-              <label className="label" htmlFor={`edu-year-${index}`}>
+              <label className="label" htmlFor={"edu-year-" + index}>
                 Year of passing
               </label>
               <input
-                id={`edu-year-${index}`}
+                id={"edu-year-" + index}
                 type="number"
                 className="input"
                 {...register(`education.${index}.yearOfPassing` as const, { valueAsNumber: true })}
               />
             </div>
             <div>
-              <label className="label" htmlFor={`edu-score-${index}`}>
+              <label className="label" htmlFor={"edu-score-" + index}>
                 Score / percentage
               </label>
               <input
-                id={`edu-score-${index}`}
+                id={"edu-score-" + index}
                 className="input"
                 {...register(`education.${index}.scoreOrPercentage` as const)}
               />
@@ -380,54 +380,54 @@ export function ProfilePage() {
         description="Add each employer the verification team should confirm."
         addLabel="Add an employer"
         render={(index) => (
-          <div className="grid gap-3 rounded-lg border border-ink-200 p-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="label" htmlFor={`emp-employer-${index}`}>
+              <label className="label" htmlFor={"emp-employer-" + index}>
                 Employer
               </label>
               <input
-                id={`emp-employer-${index}`}
+                id={"emp-employer-" + index}
                 className="input"
                 {...register(`employments.${index}.employer` as const)}
               />
             </div>
             <div>
-              <label className="label" htmlFor={`emp-designation-${index}`}>
+              <label className="label" htmlFor={"emp-designation-" + index}>
                 Designation
               </label>
               <input
-                id={`emp-designation-${index}`}
+                id={"emp-designation-" + index}
                 className="input"
                 {...register(`employments.${index}.designation` as const)}
               />
             </div>
             <div>
-              <label className="label" htmlFor={`emp-id-${index}`}>
+              <label className="label" htmlFor={"emp-id-" + index}>
                 Employee ID
               </label>
               <input
-                id={`emp-id-${index}`}
+                id={"emp-id-" + index}
                 className="input"
                 {...register(`employments.${index}.employeeId` as const)}
               />
             </div>
             <div>
-              <label className="label" htmlFor={`emp-from-${index}`}>
+              <label className="label" htmlFor={"emp-from-" + index}>
                 From
               </label>
               <input
-                id={`emp-from-${index}`}
+                id={"emp-from-" + index}
                 type="date"
                 className="input"
                 {...register(`employments.${index}.fromDate` as const)}
               />
             </div>
             <div>
-              <label className="label" htmlFor={`emp-to-${index}`}>
+              <label className="label" htmlFor={"emp-to-" + index}>
                 To
               </label>
               <input
-                id={`emp-to-${index}`}
+                id={"emp-to-" + index}
                 type="date"
                 className="input"
                 {...register(`employments.${index}.toDate` as const)}
@@ -444,21 +444,21 @@ export function ProfilePage() {
               </label>
             </div>
             <div>
-              <label className="label" htmlFor={`emp-contact-name-${index}`}>
+              <label className="label" htmlFor={"emp-contact-name-" + index}>
                 Contact name
               </label>
               <input
-                id={`emp-contact-name-${index}`}
+                id={"emp-contact-name-" + index}
                 className="input"
                 {...register(`employments.${index}.contactName` as const)}
               />
             </div>
             <div>
-              <label className="label" htmlFor={`emp-contact-email-${index}`}>
+              <label className="label" htmlFor={"emp-contact-email-" + index}>
                 Contact email
               </label>
               <input
-                id={`emp-contact-email-${index}`}
+                id={"emp-contact-email-" + index}
                 type="email"
                 className="input"
                 {...register(`employments.${index}.contactEmail` as const)}
@@ -498,14 +498,13 @@ export function ProfilePage() {
       <div className="flex justify-end">
         <button type="submit" className="btn-primary" disabled={isSubmitting || save.isPending}>
           <Save className="h-4 w-4" aria-hidden="true" />
-          {isSubmitting || save.isPending ? "Saving…" : "Save profile"}
+          {isSubmitting || save.isPending ? "Savingâ€¦" : "Save profile"}
         </button>
       </div>
     </form>
   );
 }
 
-/** Small helper that renders a repeatable group of form fields. */
 function Repeater({
   title,
   description,
@@ -534,7 +533,7 @@ function Repeater({
         </div>
         <button
           type="button"
-          className="btn-secondary"
+          className="btn-secondary btn-sm"
           onClick={() => append(emptyItem as never)}
         >
           {addLabel}
@@ -562,3 +561,4 @@ function Repeater({
     </section>
   );
 }
+

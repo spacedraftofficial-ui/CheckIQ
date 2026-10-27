@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, ArrowRight, CheckCircle2, CircleDashed, FileWarning } from "lucide-react";
 import { request } from "../../lib/api";
@@ -112,58 +112,70 @@ export function CandidateDashboard() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-ink-900">Your background verification</h1>
-          <p className="mt-1 text-sm text-ink-600">
-            Candidate ID <span className="font-mono">{data.candidateId}</span> · Case{" "}
-            <span className="font-mono">{data.caseNumber}</span>
-          </p>
+      {/* Hero header */}
+      <header className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-50 via-brand-100/50 to-ink-50 px-6 py-8 sm:px-8 sm:py-10">
+        <div className="absolute -top-4 -right-4 h-24 w-24 rounded-full bg-brand-200/30 blur-2xl" aria-hidden="true" />
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">Your background verification</h1>
+            <p className="mt-1.5 text-sm text-ink-600">
+              Candidate ID <span className="font-mono">{data.candidateId}</span> · Case{" "}
+              <span className="font-mono">{data.caseNumber}</span>
+            </p>
+          </div>
+          <StatusBadge
+            tone={data.actionRequired ? "warning" : submitted ? "success" : "info"}
+            
+          >
+            {data.statusLabel}
+          </StatusBadge>
         </div>
-        <StatusBadge tone={data.actionRequired ? "warning" : submitted ? "success" : "info"}>
-          {data.statusLabel}
-        </StatusBadge>
       </header>
 
+      {/* Action required banner */}
       {data.actionRequired ? (
         <div
-          className="card flex items-start gap-3 border-amber-300 bg-amber-50 p-4"
+          className="relative overflow-hidden rounded-xl border border-amber-300 bg-amber-50 p-4 pl-12 sm:p-5 sm:pl-14"
           role="alert"
         >
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" aria-hidden="true" />
-          <div>
-            <p className="text-sm font-semibold text-amber-900">Action required</p>
-            <p className="mt-1 text-sm text-amber-800">
-              {data.clarifications.filter((c) => c.status !== "CLOSED").length > 0
-                ? "The verifier has asked for more information. Please respond to the clarification request."
-                : "Some required items are still outstanding. Please complete them and submit."}
-            </p>
-            <Link
-              to="/clarifications"
-              className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-amber-900 underline"
-            >
-              View what is needed <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
-          </div>
+          <AlertTriangle
+            className="absolute left-4 top-4 h-5 w-5 text-amber-700 sm:left-5"
+            aria-hidden="true"
+          />
+          <p className="text-sm font-semibold text-amber-900">Action required</p>
+          <p className="mt-1 text-sm text-amber-800">
+            {data.clarifications.filter((c) => c.status !== "CLOSED").length > 0
+              ? "The verifier has asked for more information. Please respond to the clarification request."
+              : "Some required items are still outstanding. Please complete them and submit."}
+          </p>
+          <Link
+            to="/clarifications"
+            className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-amber-900 underline"
+          >
+            View what is needed <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
         </div>
       ) : null}
 
+      {/* Progress steps */}
       <section className="card p-5 sm:p-6">
-        <h2 className="text-base font-semibold text-ink-900">Progress</h2>
-        <ol className="mt-4 space-y-3">
+        <h2 className="text-base font-semibold text-ink-900">Your progress</h2>
+        <ol className="mt-4 space-y-4">
           {steps.map((step) => (
-            <li key={step.key} className="flex items-start gap-3">
-              {step.done ? (
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />
-              ) : (
-                <CircleDashed className="mt-0.5 h-5 w-5 shrink-0 text-ink-400" aria-hidden="true" />
-              )}
+            <li key={step.key} className="flex items-start gap-4">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center">
+                {step.done ? (
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600" aria-hidden="true" />
+                ) : (
+                  <CircleDashed className="h-5 w-5 text-ink-300" aria-hidden="true" />
+                )}
+              </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-ink-900">{step.label}</p>
                 {step.detail ? <p className="text-sm text-ink-500">{step.detail}</p> : null}
               </div>
               {!step.done && !submitted ? (
-                <Link to={step.to} className="btn-secondary">
+                <Link to={step.to} className="btn-secondary btn-sm">
                   Open
                 </Link>
               ) : null}
@@ -172,8 +184,9 @@ export function CandidateDashboard() {
         </ol>
       </section>
 
+      {/* Documents summary */}
       <section className="card p-5 sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-base font-semibold text-ink-900">Documents</h2>
           <Link to="/documents" className="text-sm font-semibold text-brand-700 underline">
             Manage documents
@@ -234,3 +247,5 @@ function formatDate(value: string): string {
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString(undefined, { dateStyle: "medium" });
 }
+
+

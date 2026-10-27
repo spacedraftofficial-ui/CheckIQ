@@ -106,8 +106,9 @@ export function SignupPage() {
 
   return (
     <AuthLayout>
-      <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
-        <div className="card p-6 sm:p-8">
+      <div className="bg-gradient-to-br from-ink-50 to-brand-50">
+        <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
+          <div className="card border border-ink-200 p-6 sm:p-8 shadow-sm">
           <h1 className="text-2xl font-bold text-ink-900">Create your account</h1>
           <p className="mt-1 text-sm text-ink-500">
             Your Candidate ID is used to identify your background verification case. It is not
@@ -288,6 +289,7 @@ export function SignupPage() {
               </Link>
             </p>
           )}
+          </div>
         </div>
       </div>
     </AuthLayout>
