@@ -8,6 +8,7 @@ import { useAuth } from "../lib/auth-context";
 import type { SignupResponse } from "../lib/auth-context";
 import { InlineError } from "../components/States";
 import { AuthLayout } from "../components/Footer";
+import { Check, X } from "lucide-react";
 
 const signupSchema = z
   .object({
@@ -49,6 +50,15 @@ export function SignupPage() {
   const [emailForVerification, setEmailForVerification] = useState("");
   const [resendMessage, setResendMessage] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
+  const [passwordValue, setPasswordValue] = useState("");
+
+  const passwordChecks = [
+    { label: "At least 10 characters", passed: passwordValue.length >= 10 },
+    { label: "Uppercase letter", passed: /[A-Z]/.test(passwordValue) },
+    { label: "Lowercase letter", passed: /[a-z]/.test(passwordValue) },
+    { label: "Digit", passed: /\d/.test(passwordValue) },
+    { label: "Symbol", passed: /[^A-Za-z0-9]/.test(passwordValue) },
+  ];
 
   const resendVerification = async () => {
     setResending(true);
@@ -197,10 +207,25 @@ export function SignupPage() {
                   className="input"
                   autoComplete="new-password"
                   {...register("password")}
+                  onChange={(e) => setPasswordValue(e.target.value)}
                 />
                 <p className="hint">
                   At least 10 characters with upper and lower case, a digit and a symbol.
                 </p>
+                <div className="mt-2 space-y-1">
+                  {passwordChecks.map((check) => (
+                    <div key={check.label} className="flex items-center gap-1.5 text-xs">
+                      {check.passed ? (
+                        <Check className="h-3 w-3 text-emerald-600" aria-hidden="true" />
+                      ) : (
+                        <X className="h-3 w-3 text-ink-400" aria-hidden="true" />
+                      )}
+                      <span className={check.passed ? "text-emerald-700" : "text-ink-500"}>
+                        {check.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
                 <InlineError message={errors.password?.message} />
               </div>
               <div>

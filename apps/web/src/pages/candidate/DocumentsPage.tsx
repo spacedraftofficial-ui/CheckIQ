@@ -1,6 +1,6 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Upload, History, X, FileText, AlertCircle } from "lucide-react";
+import { Upload, History, X, FileText, AlertCircle, FileImage, File } from "lucide-react";
 import { ApiError, request } from "../../lib/api";
 import { EmptyState, ErrorState, LoadingBlock, StatusBadge } from "../../components/States";
 
@@ -12,36 +12,68 @@ interface DocumentVersion {
   sizeBytes: number;
   uploadedAt: string;
   isCurrent: boolean;
-  malwareScanStatus: string;
-  uploaderName: string | null;
 }
 
 interface DocumentRow {
   id: string;
   requirementId: string;
   label: string;
+  description: string | null;
   status: string;
   currentVersion: DocumentVersion | null;
   versionCount: number;
   reviewerRemarks: string | null;
 }
 
-const statusIcons: Record<string, string> = {
-  MISSING: "🔵",
-  UPLOADED: "🔵",
-  UNDER_REVIEW: "🔵",
-  ACCEPTED: "🟢",
-  REJECTED: "🔴",
-  CLARIFICATION_REQUIRED: "🟡",
-  SUPERSEDED: "⚪",
+const documentStatusTone: Record<string, "neutral" | "info" | "success" | "warning" | "danger"> = {
+  MISSING: "danger",
+  UPLOADED: "info",
+  UNDER_REVIEW: "info",
+  ACCEPTED: "success",
+  REJECTED: "danger",
+  CLARIFICATION_REQUIRED: "warning",
+  SUPERSEDED: "neutral",
 };
+
+const ACCEPT_TYPES = ".pdf,.jpg,.jpeg,.png";
+const MAX_SIZE_TEXT = "Maximum 10 MB per file";
+
+function FileIconFor({ status, uploaded }: { status: string; uploaded: boolean }) {
+  if (uploaded) {
+    if (status === "ACCEPTED") return <FileText className="h-5 w-5 text-emerald-600" />;
+    if (status === "REJECTED") return <FileText className="h-5 w-5 text-red-600" />;
+    if (status === "CLARIFICATION_REQUIRED") return <FileImage className="h-5 w-5 text-amber-600" />;
+    return <File className="h-5 w-5 text-brand-600" />;
+  }
+  return <FileText className="h-5 w-5 text-ink-400" />;
+}
+
+function DotToneFor(status: string, uploaded: boolean): string {
+  switch (status) {
+    case "ACCEPTED":
+      return "status-dot-complete";
+    case "REJECTED":
+    case "MISSING":
+      return "status-dot-problem";
+    case "CLARIFICATION_REQUIRED":
+      return "status-dot-pending";
+    default:
+      return uploaded ? "status-dot-in-progress" : "status-dot-pending";
+  }
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+}
 
 export function DocumentsPage() {
   const queryClient = useQueryClient();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<Record<string, File>>({});
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadingFor, setUploadingFor] = useState<string | null>(null);
   const [versionsFor, setVersionsFor] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const dashboard = useQuery({
     queryKey: ["candidate", "dashboard"],
@@ -73,17 +105,25 @@ export function DocumentsPage() {
       });
     },
     onSuccess: async () => {
-      setSelectedFile(null);
+      setSelectedFiles({});
       setUploadError(null);
-      if (inputRef.current) inputRef.current.value = "";
+      setUploadingFor(null);
       await queryClient.invalidateQueries({ queryKey: ["candidate"] });
     },
     onError: (error) => {
       setUploadError(
         error instanceof ApiError ? error.message : "The upload could not be completed.",
       );
+      setUploadingFor(null);
     },
   });
+
+  const handleUpload = (document: DocumentRow) => {
+    const file = selectedFiles[document.id];
+    if (!file) return;
+    setUploadingFor(document.id);
+    void upload.mutate({ requirementId: document.requirementId, file });
+  };
 
   if (dashboard.isLoading) return <LoadingBlock label="Loading your documents" />;
   if (dashboard.isError) {
@@ -135,82 +175,97 @@ export function DocumentsPage() {
         </div>
       ) : (
         <ul className="grid gap-4 sm:gap-5 lg:grid-cols-2 xl:grid-cols-3">
-          {documents.data.map((document) => (
-            <li key={document.id} className="card p-5 sm:p-6">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg" aria-hidden="true">
-                    {statusIcons[document.status] ?? "⚪"}
-                  </span>
-                  <h2 className="text-sm font-semibold text-ink-900">{document.label}</h2>
-                </div>
-                <StatusBadge tone={toneFor(document.status)}>
-                  {document.status.replace(/_/g, " ").toLowerCase()}
-                </StatusBadge>
-              </div>
-
-              {document.currentVersion ? (
-                <div className="mt-3 flex items-start gap-2.5">
-                  <FileText className="mt-0.5 h-4 w-4 shrink-0 text-ink-400" aria-hidden="true" />
-                  <div className="min-w-0">
-                    <p className="text-sm text-ink-600">{document.currentVersion.originalFilename}</p>
-                    <p className="text-xs text-ink-500">
-                      {formatBytes(document.currentVersion.sizeBytes)} · v
-                      {document.currentVersion.versionNumber}
-                    </p>
+          {documents.data.map((document) => {
+            const uploaded = !!document.currentVersion;
+            const isUploading = uploadingFor === document.id;
+            const dotClass = DotToneFor(document.status, uploaded);
+            return (
+              <li key={document.id} className="card p-5 sm:p-6">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <FileIconFor status={document.status} uploaded={uploaded} />
+                    <h2 className="text-sm font-semibold text-ink-900">
+                      {document.label}
+                    </h2>
                   </div>
+                  <StatusBadge tone={documentStatusTone[document.status] ?? "neutral"}>
+                    {document.status.replace(/_/g, " ").toLowerCase()}
+                  </StatusBadge>
                 </div>
-              ) : (
-                <p className="mt-2 text-sm text-ink-500">Nothing uploaded yet</p>
-              )}
 
-              {document.reviewerRemarks ? (
-                <div className="mt-3 rounded-md bg-amber-50 p-2.5 text-sm text-amber-900">
-                  <p className="font-medium">Reviewer remarks</p>
-                  <p className="mt-0.5">{document.reviewerRemarks}</p>
+                {document.description ? (
+                  <p className="mt-1.5 text-sm text-ink-500">{document.description}</p>
+                ) : null}
+
+                {document.currentVersion ? (
+                  <div className="mt-3 flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-ink-600 truncate">
+                        {document.currentVersion.originalFilename}
+                      </p>
+                      <p className="text-xs text-ink-500">
+                        {formatBytes(document.currentVersion.sizeBytes)} · v
+                        {document.currentVersion.versionNumber}
+                      </p>
+                    </div>
+                    <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotClass}`} aria-hidden="true" />
+                  </div>
+                ) : (
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full status-dot-pending" aria-hidden="true" />
+                    <p className="text-sm text-ink-500">Not yet uploaded</p>
+                  </div>
+                )}
+
+                {document.reviewerRemarks ? (
+                  <div className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+                    <p className="font-semibold">Reviewer remarks</p>
+                    <p className="mt-0.5 text-amber-800">{document.reviewerRemarks}</p>
+                  </div>
+                ) : null}
+
+                <div className="mt-4 space-y-3">
+                  <label className="label" htmlFor={"file-" + document.id}>
+                    {document.currentVersion ? "Replace this document" : "Upload this document"}
+                  </label>
+                  <input
+                    id={"file-" + document.id}
+                    type="file"
+                    accept={ACCEPT_TYPES}
+                    className="block w-full cursor-pointer text-sm text-ink-700 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-brand-700 hover:file:bg-brand-100"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) {
+                        setSelectedFiles((prev) => ({ ...prev, [document.id]: file }));
+                      }
+                    }}
+                  />
+                  <p className="hint">{MAX_SIZE_TEXT}</p>
+
+                  <button
+                    type="button"
+                    className="btn-primary btn-sm w-full"
+                    disabled={isUploading || !selectedFiles[document.id]}
+                    onClick={() => handleUpload(document)}
+                  >
+                    <Upload className="h-4 w-4" aria-hidden="true" />
+                    {isUploading ? "Uploading…" : document.currentVersion ? "Replace" : "Upload"}
+                  </button>
                 </div>
-              ) : null}
 
-              <div className="mt-4 space-y-3">
-                <label className="label" htmlFor={"file-" + document.id}>
-                  {document.currentVersion ? "Replace this document" : "Upload this document"}
-                </label>
-                <input
-                  id={"file-" + document.id}
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  className="block w-full text-sm text-ink-700 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-brand-700 hover:file:bg-brand-100 cursor-pointer"
-                  onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
-                  ref={inputRef}
-                />
-                <p className="hint">PDF, JPG or PNG. Maximum 10 MB per file.</p>
-
-                <button
-                  type="button"
-                  className="btn-primary btn-sm"
-                  disabled={!selectedFile || upload.isPending}
-                  onClick={() =>
-                    selectedFile &&
-                    upload.mutate({ requirementId: document.requirementId, file: selectedFile })
-                  }
-                >
-                  <Upload className="h-4 w-4" aria-hidden="true" />
-                  {upload.isPending ? "Uploading…" : document.currentVersion ? "Replace" : "Upload"}
-                </button>
-              </div>
-
-              {document.versionCount > 0 ? (
-                <button
-                  type="button"
-                  className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 underline"
-                  onClick={() => setVersionsFor(document.id)}
-                >
-                  <History className="h-4 w-4" aria-hidden="true" />
-                  View {document.versionCount} version(s)
-                </button>
-              ) : null}
-            </li>
-          ))}
+                {document.versionCount > 0 ? (
+                  <button
+                    type="button"
+                    className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 underline"
+                    onClick={() => setVersionsFor(document.id)}
+                  >
+                    <History className="h-4 w-4" aria-hidden="true" />
+                    View {document.versionCount} version(s)
+                  </button>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       )}
 
@@ -244,14 +299,18 @@ export function DocumentsPage() {
                 {(versions.data ?? []).map((version) => (
                   <li key={version.id} className="flex flex-wrap items-center gap-3 py-3">
                     <span className="font-mono text-sm text-ink-700">v{version.versionNumber}</span>
-                    <span className="min-w-0 flex-1 truncate text-sm text-ink-800">
-                      {version.originalFilename}
-                    </span>
-                    <span className="text-xs text-ink-500">
-                      {formatBytes(version.sizeBytes)} ·{" "}
-                      {new Date(version.uploadedAt).toLocaleString()}
-                    </span>
-                    {version.isCurrent ? <StatusBadge tone="success">current</StatusBadge> : null}
+                    <div className="min-w-0 flex-1">
+                      <span className="block text-sm text-ink-800 truncate">
+                        {version.originalFilename}
+                      </span>
+                      <span className="text-xs text-ink-500">
+                        {formatBytes(version.sizeBytes)} ·{" "}
+                        {new Date(version.uploadedAt).toLocaleString()}
+                      </span>
+                    </div>
+                    {version.isCurrent ? (
+                      <StatusBadge tone="success">current</StatusBadge>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -261,26 +320,4 @@ export function DocumentsPage() {
       ) : null}
     </div>
   );
-}
-
-function toneFor(status: string): "neutral" | "info" | "success" | "warning" | "danger" {
-  switch (status) {
-    case "ACCEPTED":
-      return "success";
-    case "MISSING":
-    case "REJECTED":
-      return "danger";
-    case "CLARIFICATION_REQUIRED":
-      return "warning";
-    case "SUPERSEDED":
-      return "neutral";
-    default:
-      return "info";
-  }
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return bytes + " B";
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 }

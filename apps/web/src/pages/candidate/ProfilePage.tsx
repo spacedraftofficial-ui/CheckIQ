@@ -3,6 +3,7 @@ import { useFieldArray, useForm, type Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
+import { User, MapPin, GraduationCap, Briefcase } from "lucide-react";
 import { Save } from "lucide-react";
 import { request, ApiError } from "../../lib/api";
 import { InlineError, ErrorState, LoadingBlock } from "../../components/States";
@@ -121,14 +122,20 @@ export function ProfilePage() {
       noValidate
     >
       <header>
-        <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">My profile</h1>
+        <div className="flex items-center gap-3">
+          <User className="h-7 w-7 text-brand-600" aria-hidden="true" />
+          <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">My profile</h1>
+        </div>
         <p className="mt-1.5 text-sm text-ink-600">
           Only the details required for your background verification package are collected.
         </p>
       </header>
 
       <section className="card p-5 sm:p-6">
-        <h2 className="text-base font-semibold text-ink-900">Personal details</h2>
+        <div className="flex items-center gap-2 mb-4">
+          <User className="h-4 w-4 text-ink-700" aria-hidden="true" />
+          <h2 className="text-base font-semibold text-ink-900">Personal details</h2>
+        </div>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
             <label className="label" htmlFor="fullName">
@@ -200,6 +207,7 @@ export function ProfilePage() {
       </section>
 
       <Repeater
+        icon={<MapPin className="h-4 w-4 text-ink-700" aria-hidden="true" />}
         title="Addresses"
         description="Your current address is required. Add your permanent address if it is different."
         addLabel="Add an address"
@@ -295,6 +303,7 @@ export function ProfilePage() {
       />
 
       <Repeater
+        icon={<GraduationCap className="h-4 w-4 text-ink-700" aria-hidden="true" />}
         title="Education"
         description="Add the qualifications the verification team needs to confirm."
         addLabel="Add a qualification"
@@ -376,6 +385,7 @@ export function ProfilePage() {
       />
 
       <Repeater
+        icon={<Briefcase className="h-4 w-4 text-ink-700" aria-hidden="true" />}
         title="Employment history"
         description="Add each employer the verification team should confirm."
         addLabel="Add an employer"
@@ -506,6 +516,7 @@ export function ProfilePage() {
 }
 
 function Repeater({
+  icon,
   title,
   description,
   addLabel,
@@ -514,6 +525,7 @@ function Repeater({
   name,
   emptyItem,
 }: {
+  icon: React.ReactNode;
   title: string;
   description: string;
   addLabel: string;
@@ -527,8 +539,11 @@ function Repeater({
   return (
     <section className="card p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="flex items-center gap-2">
+          {icon}
           <h2 className="text-base font-semibold text-ink-900">{title}</h2>
+        </div>
+        <div>
           <p className="mt-1 text-sm text-ink-500">{description}</p>
         </div>
         <button
