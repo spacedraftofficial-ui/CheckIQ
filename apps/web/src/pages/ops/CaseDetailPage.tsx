@@ -80,6 +80,25 @@ interface DocumentVersion {
   malwareScanStatus: string;
 }
 
+interface Clarification {
+  id: string;
+  checkId: string | null;
+  documentId: string | null;
+  issueSummary: string;
+  requiredAction: string;
+  remarks: string | null;
+  dueDate: string | null;
+  status: "OPEN" | "RESPONDED" | "CLOSED" | "CANCELLED";
+  requestedById: string;
+  requestedByName: string | null;
+  requestedAt: string;
+  respondedAt: string | null;
+  responseText: string | null;
+  closedAt: string | null;
+  closeReason: string | null;
+  isOverdue: boolean;
+}
+
 export function CaseDetailPage() {
   const { caseId } = useParams<{ caseId: string }>();
   const queryClient = useQueryClient();
@@ -129,9 +148,16 @@ export function CaseDetailPage() {
     enabled: Boolean(caseId),
   });
 
-  const documents = useQuery({
+   const documents = useQuery({
     queryKey: ["ops", "case", caseId, "documents"],
     queryFn: () => request<DocumentRow[]>(`/cases/${caseId}/documents`),
+    enabled: Boolean(caseId),
+  });
+
+  const clarifications = useQuery({
+    queryKey: ["ops", "case", caseId, "clarifications"],
+    queryFn: () =>
+      request<Clarification[]>(`/cases/${caseId}/clarifications`),
     enabled: Boolean(caseId),
   });
 
@@ -485,6 +511,67 @@ export function CaseDetailPage() {
           </div>
         </div>
       )}
+
+      {clarifications.data && clarifications.data.length > 0 ? (
+        <section className="card p-5 sm:p-6">
+          <h2 className="text-base font-semibold text-ink-900">Clarification thread</h2>
+          <p className="mt-1 text-sm text-ink-600">
+            History of clarification requests and candidate responses for this case.
+          </p>
+          <div className="mt-4 space-y-4">
+            {clarifications.data.map((clarification) => (
+              <div key={clarification.id} className="border-l-2 border-ink-200 pl-4">
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-ink-900">
+                      {clarification.requestedByName ?? "System"} asked:
+                    </p>
+                    <p className="mt-0.5 text-sm text-ink-700">{clarification.issueSummary}</p>
+                    {clarification.requiredAction ? (
+                      <p className="mt-1 text-sm text-ink-600">
+                        <span className="font-medium">Action required:</span> {clarification.requiredAction}
+                      </p>
+                    ) : null}
+                    {clarification.remarks ? (
+                      <p className="mt-1 text-sm text-ink-600">{clarification.remarks}</p>
+                    ) : null}
+                    {clarification.dueDate ? (
+                      <p className="mt-1 text-xs text-ink-500">
+                        Due: {new Date(clarification.dueDate).toLocaleDateString()}
+                        {clarification.isOverdue ? " (overdue)" : ""}
+                      </p>
+                    ) : null}
+                  </div>
+                  <span className="text-xs text-ink-500">
+                    {new Date(clarification.requestedAt).toLocaleString()}
+                  </span>
+                </div>
+
+                {clarification.responseText ? (
+                  <div className="rounded-lg bg-ink-50 p-3">
+                    <p className="text-sm font-semibold text-ink-900">Candidate responded:</p>
+                    <p className="mt-1 text-sm text-ink-800">{clarification.responseText}</p>
+                    {clarification.respondedAt ? (
+                      <p className="mt-1 text-xs text-ink-500">
+                        Responded {new Date(clarification.respondedAt).toLocaleString()}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="text-sm text-ink-500 italic">Awaiting candidate response</p>
+                )}
+
+                {clarification.closedAt ? (
+                  <div className="mt-2 text-xs text-ink-500">
+                    Closed: {clarification.closeReason ?? ""} (
+                    {new Date(clarification.closedAt).toLocaleString()})
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="card p-5 sm:p-6">
         <h2 className="text-base font-semibold text-ink-900">Request clarification</h2>

@@ -271,6 +271,7 @@ candidateRouter.get("/dashboard", authenticateCandidate, async (req, res) => {
       status: schema.clarificationRequests.status,
       requestedAt: schema.clarificationRequests.requestedAt,
       respondedAt: schema.clarificationRequests.respondedAt,
+      responseText: schema.clarificationRequests.responseText,
     })
     .from(schema.clarificationRequests)
     .where(eq(schema.clarificationRequests.caseId, caseRow.id))
@@ -319,6 +320,7 @@ candidateRouter.get("/dashboard", authenticateCandidate, async (req, res) => {
         status: clarification.status,
         requestedAt: clarification.requestedAt.toISOString(),
         respondedAt: clarification.respondedAt?.toISOString() ?? null,
+        responseText: clarification.responseText,
         isOverdue:
           clarification.dueDate !== null &&
           new Date(clarification.dueDate).getTime() < Date.now() &&
