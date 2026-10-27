@@ -1,6 +1,6 @@
 ﻿import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, CircleDashed } from "lucide-react";
 import { request } from "../../lib/api";
 import { EmptyState, ErrorState, LoadingBlock, StatusBadge } from "../../components/States";
 import { useAuth } from "../../lib/auth-context";
@@ -159,20 +159,30 @@ export function CandidateDashboard() {
       {/* Progress steps */}
       <section className="card p-5 sm:p-6">
         <h2 className="text-base font-semibold text-ink-900">Your progress</h2>
-        <ul className="mt-4 space-y-5">
+        <ul className="step-list mt-4">
           {steps.map((step) => {
-            const statusTone = step.done
-              ? "status-dot-complete"
+            const stepTone = step.done
+              ? "step-dot-complete"
               : data.actionRequired
-                ? "status-dot-problem"
-                : "status-dot-pending";
+                ? "step-dot-problem"
+                : "step-dot-pending";
+            const iconColor = stepTone === "step-dot-complete"
+              ? "text-emerald-600"
+              : stepTone === "step-dot-problem"
+                ? "text-red-600"
+                : "text-ink-400";
+            const Icon = stepTone === "step-dot-complete" ? CheckCircle2 : CircleDashed;
             return (
-              <li key={step.key} className="flex items-center gap-4">
-                <span className={`h-3 w-3 ${statusTone} shrink-0 animate-pulse-subtle`} />
+              <li key={step.key} className="step-item">
+                <span className={`step-dot ${stepTone} ${step.done ? "animate-bounce-in" : ""}`}>
+                  <Icon className={`h-3 w-3 ${iconColor}`} aria-hidden="true" />
+                </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-ink-900">{step.label}</p>
                   {step.detail ? (
-                    <p className={`mt-0.5 text-sm ${step.done ? "text-emerald-800" : "text-ink-500"}`}>
+                    <p
+                      className={`mt-0.5 text-sm ${step.done ? "text-emerald-800" : "text-ink-500"}`}
+                    >
                       {step.detail}
                     </p>
                   ) : null}

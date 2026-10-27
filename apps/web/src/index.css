@@ -5,7 +5,7 @@
  *
  * A restrained palette: a single brand colour, semantic status colours that
  * meet WCAG AA contrast against their backgrounds, and neutral surfaces. No
- * sensitive value is ever rendered in a way that relies on colour alone â€”
+ * sensitive value is ever rendered in a way that relies on colour alone —
  * every status badge also carries its text label.
  */
 @theme {
@@ -46,27 +46,26 @@
       Arial, sans-serif;
   }
 
-  /* Visible focus for keyboard users on every interactive element. */
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-brand-600;
   }
 }
 
 /**
- * The button family is declared as utilities so that the variants can compose
- * the base. In Tailwind v4 a class defined in `@layer components` cannot be
- * used with `@apply`.
+ * Button family — declared as utilities so variants compose the base.
+ * In Tailwind v4 a class defined in `@layer components` cannot be used with
+ * `@apply`.
  */
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60;
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-ink-900 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100;
 }
 
 @utility btn-primary {
-  @apply btn bg-brand-600 text-white hover:bg-brand-700;
+  @apply btn bg-brand-600 text-white hover:bg-brand-700 hover:shadow-lg active:scale-[0.97];
 }
 
 @utility btn-secondary {
-  @apply btn border border-ink-300 bg-white text-ink-800 hover:bg-ink-50;
+  @apply btn border border-ink-300 bg-white text-ink-800 hover:bg-ink-50 hover:shadow active:scale-[0.97];
 }
 
 @utility btn-warning {
@@ -74,7 +73,7 @@
 }
 
 @utility btn-danger {
-  @apply btn bg-red-600 text-white hover:bg-red-700;
+  @apply btn bg-red-600 text-white hover:bg-red-700 hover:shadow-lg active:scale-[0.97];
 }
 
 @utility btn-ghost {
@@ -82,20 +81,39 @@
 }
 
 @utility btn-sm {
-  @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60;
+  @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60;
 }
 
 @utility btn-outline {
   @apply btn border border-brand-300 bg-transparent text-brand-700 hover:bg-brand-50;
 }
 
+/**
+ * Core component styles.
+ */
 @layer components {
   .card {
-    @apply rounded-xl border border-ink-200 bg-white shadow-sm;
+    @apply relative rounded-xl border border-ink-200 bg-white shadow-sm transition-all duration-200;
+  }
+
+  .card:hover {
+    @apply shadow-md;
+  }
+
+  .card-interactive {
+    @apply card cursor-pointer;
+  }
+
+  .card-interactive:hover {
+    @apply border-brand-300 shadow-lg ring-1 ring-brand-200;
+  }
+
+  .card-elevated {
+    @apply rounded-xl border border-ink-200 bg-white shadow-lg;
   }
 
   .input {
-    @apply w-full rounded-lg border border-ink-300 bg-white px-3 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 focus:outline-none;
+    @apply w-full rounded-lg border border-ink-300 bg-white px-3 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 transition-all duration-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 focus:outline-none;
   }
 
   .label {
@@ -110,66 +128,13 @@
     @apply mt-1 text-sm text-red-600;
   }
 
-
-  .card {
-    @apply rounded-xl border border-ink-200 bg-white shadow-sm transition-all duration-200;
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
   }
 
-  .card:hover {
-    @apply shadow-md;
-  }
-
-  .btn-primary {
-    @apply btn bg-brand-600 text-white hover:bg-brand-700 active:scale-[0.98];
-  }
-
-  .btn-secondary {
-    @apply btn border border-ink-300 bg-white text-ink-800 hover:bg-ink-50 active:scale-[0.98];
-  }
-
-  .input {
-    @apply w-full rounded-lg border border-ink-300 bg-white px-3 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-200 focus:outline-none;
-  }
-
-  @keyframes pulse-subtle {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
-  }
-
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-2px); }
-  }
-
-  @keyframes shimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
-  }
-
-  @utility animate-pulse-subtle {
-    animation: pulse-subtle 2s ease-in-out infinite;
-  }
-
-  @utility animate-float {
-    animation: float 4s ease-in-out infinite;
-  }
-
-  @utility animate-shimmer {
-    position: relative;
-    overflow: hidden;
-  }
-
-  @utility animate-shimmer::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90, transparent, rgba(255, 255, 255, 0.3), transparent);
-    animation: shimmer 2s infinite;
-  }
-
+  /**
+   * Status dots — consistent visual indicator for document/item status.
+   */
   .status-dot {
     @apply inline-block h-2.5 w-2.5 shrink-0 rounded-full;
   }
@@ -190,83 +155,304 @@
     @apply bg-red-500;
   }
 
-  .card {
-    @apply rounded-xl border border-ink-200 bg-white shadow-sm transition-all duration-200;
+  /**
+   * Decorative elements.
+   */
+  .decorative-circle {
+    @apply absolute rounded-full blur-2xl;
   }
 
-  .card:hover {
-    @apply shadow-md;
+  .divider {
+    @apply relative;
   }
 
-  .btn-primary {
-    @apply btn bg-brand-600 text-white hover:bg-brand-700 active:scale-[0.98];
-  }
-
-  .btn-secondary {
-    @apply btn border border-ink-300 bg-white text-ink-800 hover:bg-ink-50 active:scale-[0.98];
-  }
-
-  .input {
-    @apply w-full rounded-lg border border-ink-300 bg-white px-3 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-200 focus:outline-none;
-  }
-
-  @keyframes pulse-subtle {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
-  }
-
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-2px); }
-  }
-
-  @keyframes shimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
-  }
-
-  @utility animate-pulse-subtle {
-    animation: pulse-subtle 2s ease-in-out infinite;
-  }
-
-  @utility animate-float {
-    animation: float 4s ease-in-out infinite;
-  }
-
-  @utility animate-shimmer {
-    position: relative;
-    overflow: hidden;
-  }
-
-  @utility animate-shimmer::after {
+  .divider::before {
     content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90, transparent, rgba(255, 255, 255, 0.3), transparent);
-    animation: shimmer 2s infinite;
+    @apply absolute inset-0 top-1/2 h-px w-full bg-ink-200;
   }
 
-  .status-dot {
-    @apply inline-block h-2.5 w-2.5 shrink-0 rounded-full;
+  /**
+   * Form field group — consistent spacing for label + input + error.
+   */
+  .form-field {
+    @apply mb-4;
   }
 
-  .status-dot-pending {
-    @apply bg-amber-400;
+  .form-field:last-child {
+    @apply mb-0;
   }
 
-  .status-dot-in-progress {
-    @apply bg-brand-500;
+  /**
+   * Progress stepper — horizontal steps with dots and connectors.
+   */
+  .step-list {
+    @apply flex flex-col gap-4;
   }
 
-  .status-dot-complete {
-    @apply bg-emerald-500;
+  .step-item {
+    @apply relative flex items-start gap-3;
   }
 
-  .status-dot-problem {
-    @apply bg-red-500;
+  .step-item:not(:last-child)::after {
+    content: "";
+    @apply absolute left-3 top-6 bottom-0 w-px bg-ink-200;
+  }
+
+  .step-dot {
+    @apply relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 bg-white;
+  }
+
+  .step-dot-pending {
+    @apply border-ink-300 text-ink-500;
+  }
+
+  .step-dot-in-progress {
+    @apply border-brand-500 bg-brand-50 text-brand-600;
+  }
+
+  .step-dot-complete {
+    @apply border-emerald-500 bg-emerald-50 text-emerald-600;
+  }
+
+  .step-dot-problem {
+    @apply border-red-500 bg-red-50 text-red-600;
+  }
+
+  /**
+   * Table styling for data-heavy views.
+   */
+  .data-table {
+    @apply w-full border-collapse text-sm;
+  }
+
+  .data-table th {
+    @apply px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-ink-500;
+  }
+
+  .data-table td {
+    @apply px-3 py-2 text-sm text-ink-800;
+  }
+
+  .data-table tbody tr {
+    @apply border-b border-ink-200;
+  }
+
+  .data-table tbody tr:hover {
+    @apply bg-ink-50;
+  }
+
+  /**
+   * File upload styling.
+   */
+  .file-input {
+    @apply block w-full cursor-pointer text-sm text-ink-700 file:mr-3 file:-ml-1 file:cursor-pointer file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-brand-700 hover:file:bg-brand-100;
+  }
+
+  /**
+   * Custom checkbox styling.
+   */
+  .checkbox {
+    @apply h-4 w-4 rounded border-ink-300 text-brand-600 focus:ring-brand-500;
+  }
+
+  /**
+   * Custom select styling.
+   */
+  .select {
+    @apply w-full rounded-lg border border-ink-300 bg-white px-3 py-2.5 text-sm text-ink-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 focus:outline-none;
+  }
+
+  /**
+   * Avatar style.
+   */
+  .avatar {
+    @apply flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-brand-700 font-semibold;
+  }
+
+  .avatar-sm {
+    @apply flex h-7 w-7 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700;
+  }
+
+  /**
+   * Tag style for inline labels.
+   */
+  .tag {
+    @apply inline-flex items-center gap-1 rounded-md px-2 py-0.75 text-xs font-medium;
+  }
+
+  .tag-blue {
+    @apply bg-brand-100 text-brand-800;
+  }
+
+  .tag-green {
+    @apply bg-emerald-100 text-emerald-800;
+  }
+
+  .tag-amber {
+    @apply bg-amber-100 text-amber-800;
+  }
+
+  .tag-red {
+    @apply bg-red-100 text-red-800;
+  }
+
+  /**
+   * Timeline styling for clarifications/messages.
+   */
+  .timeline {
+    @apply relative pl-6;
+  }
+
+  .timeline::before {
+    content: "";
+    @apply absolute left-2 top-0 bottom-0 w-px bg-ink-200;
+  }
+
+  .timeline-item {
+    @apply relative mb-4;
+  }
+
+  .timeline-item:last-child {
+    @apply mb-0;
+  }
+
+  .timeline-dot {
+    @apply absolute left-[-10px] top-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-white;
+  }
+
+  .timeline-dot-own {
+    @apply bg-brand-600 text-white;
+  }
+
+  .timeline-dot-other {
+    @apply bg-ink-300 text-ink-700;
+  }
+
+  /**
+   * Message bubbles for conversation UI.
+   */
+  .message {
+    @apply max-w-[80%] rounded-xl px-3 py-2;
+  }
+
+  .message-own {
+    @apply bg-brand-600 text-white;
+  }
+
+  .message-other {
+    @apply bg-ink-100 text-ink-900;
+  }
+
+  /**
+   * Progress bar.
+   */
+  .progress-bar {
+    @apply h-2 w-full overflow-hidden rounded-full bg-ink-200;
+  }
+
+  .progress-fill {
+    @apply h-full rounded-full bg-brand-600 transition-all duration-300;
+  }
+
+  /**
+   * Skeleton loading placeholder.
+   */
+  .skeleton {
+    @apply animate-shimmer rounded-lg bg-ink-200;
+  }
+
+  .skeleton-text {
+    @apply h-4 w-3/4 rounded;
+  }
+
+  .skeleton-title {
+    @apply h-6 w-1/2 rounded;
+  }
+
+  /**
+   * Decorative gradient overlay for hero sections.
+   */
+  .hero-overlay {
+    @apply absolute inset-0 -z-10 bg-gradient-to-br from-brand-50 via-brand-100/30 to-ink-50;
+  }
+
+  /**
+   * Floating label pattern.
+   */
+  .float-label {
+    @apply peer w-full rounded-lg border border-ink-300 bg-white px-3 pt-5 pb-2 text-sm text-ink-900 placeholder-transparent focus:border-brand-500 focus:ring-2 focus:ring-brand-200 focus:outline-none;
+  }
+
+  .float-label-label {
+    @apply pointer-events-none absolute left-3 top-3 text-sm text-ink-500 transition-all peer-focus:top-1 peer-focus:text-xs peer-focus:text-brand-600 peer-placeholder-shown:top-3 peer-placeholder-shown:text-sm;
   }
 }
 
+/**
+ * Animation keyframes.
+ */
+@keyframes pulse-subtle {
+  0%,
+  100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes float {
+  0%,
+  100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounceIn {
+  0% { transform: scale(0.3); opacity: 0; }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@utility animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
+
+@utility animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+@utility animate-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+@utility animate-shimmer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 2s infinite;
+}
+
+@utility animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+@utility animate-bounce-in {
+  animation: bounceIn 0.5s ease-out;
+}

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { CheckCircle2, Circle, Send, ClipboardCheck } from "lucide-react";
+import { CheckCircle2, CircleDashed, Send, ClipboardCheck } from "lucide-react";
 import { ApiError, request } from "../../lib/api";
 import { ErrorState, InlineError, LoadingBlock } from "../../components/States";
 
@@ -156,30 +156,30 @@ export function SubmitPage() {
           <ClipboardCheck className="h-5 w-5 text-brand-600" aria-hidden="true" />
           <h2 className="text-base font-semibold text-ink-900">Submission checklist</h2>
         </div>
-        <ul className="mt-4 space-y-2.5">
-          {items.map((item) => (
-            <li
-              key={item.label}
-              className="flex items-center gap-3 rounded-lg border border-ink-200 p-3 transition-colors hover:bg-ink-50"
-            >
-              {item.done ? (
-                <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />
-              ) : (
-                <Circle className="h-5 w-5 shrink-0 text-ink-400" aria-hidden="true" />
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-ink-900">{item.label}</p>
-                {item.detail ? (
-                  <p className="text-sm text-ink-500">{item.detail}</p>
+        <ul className="step-list mt-4">
+          {items.map((item) => {
+            const stepTone = item.done ? "step-dot-complete" : "step-dot-pending";
+            const Icon = item.done ? CheckCircle2 : CircleDashed;
+            const iconColor = item.done ? "text-emerald-600" : "text-ink-400";
+            return (
+              <li key={item.label} className="step-item">
+                <span className={`step-dot ${stepTone}`}>
+                  <Icon className={"h-3 w-3 " + iconColor} aria-hidden="true" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-ink-900">{item.label}</p>
+                  {item.detail ? (
+                    <p className="mt-0.5 text-sm text-ink-500">{item.detail}</p>
+                  ) : null}
+                </div>
+                {!item.done && item.to ? (
+                  <Link to={item.to} className="btn-secondary btn-sm">
+                    Fix
+                  </Link>
                 ) : null}
-              </div>
-              {!item.done && item.to ? (
-                <Link to={item.to} className="btn-secondary btn-sm">
-                  Fix
-                </Link>
-              ) : null}
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       </section>
 
