@@ -168,6 +168,9 @@ verification sources, the score or the eligibility result.
 | `GET` | `/api/documents/:documentId` | Case scope | One document. |
 | `GET` | `/api/documents/:documentId/versions` | Case scope | The version history. |
 | `GET` | `/api/documents/:documentId/versions/:versionId/download` | Case scope + `verification:read` (staff) | Download a stored file. |
+| `GET` | `/api/documents/:documentId/versions/:versionId/view` | Case scope + `verification:read` (staff) | View a stored file inline. |
+
+**Storage configuration**: On Hostinger, set `STORAGE_DIR` to an absolute path outside the project directory so uploaded files survive auto-deploys. A missing file returns `404 NOT_FOUND`.
 
 Upload responses:
 
@@ -347,7 +350,9 @@ never available to a candidate.
 |--------|------|--------|-------------|
 | `GET` | `/api/admin/users` | `user:manage`, `role:manage` | List users. |
 | `POST` | `/api/admin/users` | `user:manage` | Create a staff account. |
-| `PATCH` | `/api/admin/users/:id` | `user:manage`, `permission:manage` | Update a user, including their roles. |
+| `PATCH` | `/api/admin/users/:id` | `user:manage`, `permission:manage` | Update a user, including roles and `mustChangePassword`. |
+| `DELETE` | `/api/admin/users/:id` | `user:manage` | Soft-delete a user (sets `deletedAt`). |
+| `POST` | `/api/admin/users/:id/reset-password` | `user:manage` | Generate a temporary password. Sets `mustChangePassword=true`, invalidates sessions, returns temp password. Notifies user. |
 | `GET` | `/api/admin/roles` | `role:manage`, `config:read` | The roles and their permissions. |
 | `GET` | `/api/admin/packages` | `config:read`, `package:manage` | The BGV packages. |
 | `GET` | `/api/admin/document-categories` | `config:read`, `documentcategory:manage` | The document catalogue. |
