@@ -1,6 +1,6 @@
 ﻿import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight, CheckCircle2, CircleDashed, FileWarning } from "lucide-react";
+import { AlertTriangle, ArrowRight } from "lucide-react";
 import { request } from "../../lib/api";
 import { EmptyState, ErrorState, LoadingBlock, StatusBadge } from "../../components/States";
 import { useAuth } from "../../lib/auth-context";
@@ -122,13 +122,12 @@ export function CandidateDashboard() {
               Candidate ID <span className="font-mono">{data.candidateId}</span> · Case{" "}
               <span className="font-mono">{data.caseNumber}</span>
             </p>
-          </div>
-          <StatusBadge
-            tone={data.actionRequired ? "warning" : submitted ? "success" : "info"}
-            
-          >
-            {data.statusLabel}
-          </StatusBadge>
+        </div>
+        <StatusBadge
+          tone={data.actionRequired ? "warning" : submitted ? "success" : "info"}
+        >
+          {data.statusLabel}
+        </StatusBadge>
         </div>
       </header>
 
@@ -160,28 +159,33 @@ export function CandidateDashboard() {
       {/* Progress steps */}
       <section className="card p-5 sm:p-6">
         <h2 className="text-base font-semibold text-ink-900">Your progress</h2>
-        <ol className="mt-4 space-y-4">
-          {steps.map((step) => (
-            <li key={step.key} className="flex items-start gap-4">
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center">
-                {step.done ? (
-                  <CheckCircle2 className="h-5 w-5 text-emerald-600" aria-hidden="true" />
-                ) : (
-                  <CircleDashed className="h-5 w-5 text-ink-300" aria-hidden="true" />
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-ink-900">{step.label}</p>
-                {step.detail ? <p className="text-sm text-ink-500">{step.detail}</p> : null}
-              </div>
-              {!step.done && !submitted ? (
-                <Link to={step.to} className="btn-secondary btn-sm">
-                  Open
-                </Link>
-              ) : null}
-            </li>
-          ))}
-        </ol>
+        <ul className="mt-4 space-y-5">
+          {steps.map((step) => {
+            const statusTone = step.done
+              ? "status-dot-complete"
+              : data.actionRequired
+                ? "status-dot-problem"
+                : "status-dot-pending";
+            return (
+              <li key={step.key} className="flex items-center gap-4">
+                <span className={`h-3 w-3 ${statusTone} shrink-0 animate-pulse-subtle`} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-ink-900">{step.label}</p>
+                  {step.detail ? (
+                    <p className={`mt-0.5 text-sm ${step.done ? "text-emerald-800" : "text-ink-500"}`}>
+                      {step.detail}
+                    </p>
+                  ) : null}
+                </div>
+                {!step.done && !submitted ? (
+                  <Link to={step.to} className="btn-secondary btn-sm">
+                    Open
+                  </Link>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
       </section>
 
       {/* Documents summary */}
@@ -199,36 +203,24 @@ export function CandidateDashboard() {
           </div>
         ) : (
           <ul className="mt-4 divide-y divide-ink-200">
-            {data.documents.map((document) => (
-              <li key={document.id} className="flex flex-wrap items-center gap-3 py-3">
-                <FileWarning
-                  className={`h-4 w-4 shrink-0 ${
-                    document.status === "ACCEPTED"
-                      ? "text-emerald-600"
-                      : document.status === "MISSING"
-                        ? "text-red-600"
-                        : "text-ink-400"
-                  }`}
-                  aria-hidden="true"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-ink-900">
-                    {document.label}
-                    {document.isMandatory ? (
-                      <span className="ml-2 text-xs font-normal text-ink-500">Required</span>
-                    ) : (
-                      <span className="ml-2 text-xs font-normal text-ink-500">Optional</span>
-                    )}
-                  </p>
-                  {document.reviewerRemarks ? (
-                    <p className="mt-0.5 text-sm text-amber-800">{document.reviewerRemarks}</p>
-                  ) : null}
-                </div>
-                <StatusBadge tone={documentStatusTone[document.status] ?? "neutral"}>
-                  {document.status.replace(/_/g, " ").toLowerCase()}
-                </StatusBadge>
-              </li>
-            ))}
+            {data.documents.map((document) => {
+              const dotTone = dotFor(document.status, !!document.uploaded);
+              return (
+                <li key={document.id} className="flex flex-wrap items-center gap-3 py-3">
+                  <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotTone}`} aria-hidden="true" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-ink-900">
+                      {document.label}</p>
+                    {document.reviewerRemarks ? (
+                      <p className="mt-0.5 text-sm text-amber-800">{document.reviewerRemarks}</p>
+                    ) : null}
+                  </div>
+                  <StatusBadge tone={documentStatusTone[document.status] ?? "neutral"}>
+                    {document.status.replace(/_/g, " ").toLowerCase()}
+                  </StatusBadge>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
@@ -246,6 +238,21 @@ function formatDate(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString(undefined, { dateStyle: "medium" });
+}
+
+function dotFor(status: string, uploaded: boolean): string {
+  switch (status) {
+    case "ACCEPTED":
+      return "status-dot-complete";
+    case "MISSING":
+      return "status-dot-problem";
+    case "REJECTED":
+      return "status-dot-problem";
+    case "CLARIFICATION_REQUIRED":
+      return "status-dot-pending";
+    default:
+      return uploaded ? "status-dot-in-progress" : "status-dot-pending";
+  }
 }
 
 

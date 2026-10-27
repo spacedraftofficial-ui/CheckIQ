@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Clock, MessageSquare } from "lucide-react";
+import { AlertTriangle, Clock, MessageSquare, CheckCircle2 } from "lucide-react";
 import { ApiError, request } from "../../lib/api";
 import { EmptyState, ErrorState, InlineError, LoadingBlock, StatusBadge } from "../../components/States";
 
@@ -27,13 +27,13 @@ export function ClarificationsPage() {
     queryKey: ["candidate", "clarifications"],
     queryFn: async () => {
       const dashboard = await request<{ caseId: string }>("/dashboard");
-      return request<Clarification[]>(`/cases/${dashboard.caseId}/clarifications`);
+      return request<Clarification[]>("/cases/" + dashboard.caseId + "/clarifications");
     },
   });
 
   const respond = useMutation({
     mutationFn: ({ id, text }: { id: string; text: string }) =>
-      request<{ id: string; status: string; isLate: boolean }>(`/clarifications/${id}/respond`, {
+      request<{ id: string; status: string; isLate: boolean }>("/clarifications/" + id + "/respond", {
         method: "POST",
         body: { responseText: text },
       }),
@@ -80,15 +80,20 @@ export function ClarificationsPage() {
       ) : null}
 
       {open.length === 0 && closed.length === 0 ? (
-        <EmptyState
-          title="Nothing to respond to"
-          description="You have no outstanding clarification requests."
-        />
+        <div className="card p-8 text-center">
+          <MessageSquare className="mx-auto h-10 w-10 text-ink-300" aria-hidden="true" />
+          <EmptyState
+            title="Nothing to respond to"
+            description="You have no outstanding clarification requests."
+          />
+        </div>
       ) : null}
 
       {open.length > 0 ? (
         <section className="space-y-4">
-          <h2 className="text-base font-semibold text-ink-900">Awaiting your response</h2>
+          <h2 className="text-base font-semibold text-ink-900">
+            Awaiting your response ({open.length})
+          </h2>
           {open.map((clarification) => (
             <article key={clarification.id} className="card p-5 sm:p-6">
               <div className="flex flex-wrap items-start justify-between gap-2">
@@ -106,29 +111,38 @@ export function ClarificationsPage() {
                 </StatusBadge>
               </div>
 
-              <div className="mt-3 rounded-lg bg-ink-50 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">
-                  What is required
-                </p>
-                <p className="mt-1 text-sm text-ink-800">{clarification.requiredAction}</p>
-                {clarification.remarks ? (
-                  <p className="mt-2 text-sm text-ink-600">{clarification.remarks}</p>
-                ) : null}
-                {clarification.dueDate ? (
-                  <p className="mt-2 text-xs text-ink-500">
-                    Please respond by {new Date(clarification.dueDate).toLocaleDateString()}
-                  </p>
-                ) : null}
+              <div className="mt-3 rounded-lg border border-ink-200 bg-ink-50 p-4">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 text-ink-500" aria-hidden="true" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">
+                      What is required
+                    </p>
+                    <p className="mt-1 text-sm text-ink-800">
+                      {clarification.requiredAction}
+                    </p>
+                    {clarification.remarks ? (
+                      <p className="mt-2 text-sm text-ink-600">{clarification.remarks}</p>
+                    ) : null}
+                    {clarification.dueDate ? (
+                      <p className="mt-2 text-xs text-ink-500">
+                        Please respond by{" "}
+                        {new Date(clarification.dueDate).toLocaleDateString(undefined, { dateStyle: "medium" })}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
               </div>
 
               {clarification.status === "OPEN" ? (
                 <div className="mt-4">
-                  <label className="label" htmlFor={`response-${clarification.id}`}>
+                  <label className="label" htmlFor={"response-" + clarification.id}>
                     Your response
                   </label>
                   <textarea
-                    id={`response-${clarification.id}`}
+                    id={"response-" + clarification.id}
                     className="input min-h-28"
+                    placeholder="Provide the requested information clearly and as completely as you can."
                     value={responses[clarification.id] ?? ""}
                     onChange={(event) =>
                       setResponses((current) => ({
@@ -156,11 +170,18 @@ export function ClarificationsPage() {
                   </button>
                 </div>
               ) : (
-                <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                    Your response
-                  </p>
-                  <p className="mt-1 text-sm text-emerald-900">{clarification.responseText}</p>
+                <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600" aria-hidden="true" />
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                        Your response
+                      </p>
+                      <p className="mt-1 text-sm text-emerald-900">
+                        {clarification.responseText}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
             </article>
@@ -170,7 +191,9 @@ export function ClarificationsPage() {
 
       {closed.length > 0 ? (
         <section className="space-y-3">
-          <h2 className="text-base font-semibold text-ink-900">Closed requests</h2>
+          <h2 className="text-base font-semibold text-ink-900">
+            Closed requests ({closed.length})
+          </h2>
           {closed.map((clarification) => (
             <article key={clarification.id} className="card p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">

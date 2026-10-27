@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, FileText, Check, CheckCircle2 } from "lucide-react";
 import { ApiError, request } from "../../lib/api";
 import { ErrorState, InlineError, LoadingBlock } from "../../components/States";
 
@@ -58,10 +58,13 @@ export function ConsentPage() {
   if (!consent) return <LoadingBlock label="Loading the declaration" />;
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6">
       <header>
-        <h1 className="text-2xl font-bold text-ink-900">Declaration and consent</h1>
-        <p className="mt-1 text-sm text-ink-600">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="h-6 w-6 text-brand-600" aria-hidden="true" />
+          <h1 className="text-2xl font-bold text-ink-900">Declaration and consent</h1>
+        </div>
+        <p className="mt-1.5 text-sm text-ink-600">
           Version {consent.version} · effective from{" "}
           {new Date(consent.effectiveFrom).toLocaleDateString(undefined, { dateStyle: "medium" })}
         </p>
@@ -69,44 +72,49 @@ export function ConsentPage() {
 
       {consent.accepted ? (
         <div
-          className="card flex items-start gap-3 border-emerald-200 bg-emerald-50 p-5"
+          className="relative overflow-hidden rounded-xl border border-emerald-200 bg-emerald-50 p-5 pl-14"
           role="status"
         >
-          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" aria-hidden="true" />
-          <div>
-            <p className="text-sm font-semibold text-emerald-900">
-              You have accepted this version
-            </p>
-            <p className="mt-1 text-sm text-emerald-800">
-              Accepted on{" "}
-              {consent.acceptedAt
-                ? new Date(consent.acceptedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
-                : "a previous visit"}
-              . If the wording changes, you will be asked to accept the new version before
-              you can submit.
-            </p>
+          <div className="absolute left-4 top-5">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600" aria-hidden="true" />
           </div>
+          <p className="text-sm font-semibold text-emerald-900">You have accepted this version</p>
+          <p className="mt-1 text-sm text-emerald-800">
+            Accepted on{" "}
+            {consent.acceptedAt
+              ? new Date(consent.acceptedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
+              : "a previous visit"}
+            . If the wording changes, you will be asked to accept the new version before
+            you can submit.
+          </p>
         </div>
       ) : null}
 
-      <section className="card p-5 sm:p-6">
-        <h2 className="text-base font-semibold text-ink-900">{consent.title}</h2>
-        <div className="mt-3 max-h-96 overflow-y-auto rounded-lg border border-ink-200 bg-ink-50 p-4">
-          <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-ink-700">
-            {consent.body}
-          </pre>
+      <section className="card p-5 sm:p-7">
+        <div className="flex items-center gap-2 mb-3">
+          <FileText className="h-5 w-5 text-ink-700" aria-hidden="true" />
+          <h2 className="text-lg font-semibold text-ink-900">{consent.title}</h2>
+        </div>
+        <div className="relative rounded-lg border border-ink-200 bg-ink-50 p-5">
+          <div className="max-h-96 overflow-y-auto">
+            <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-ink-700">
+              {consent.body}
+            </pre>
+          </div>
         </div>
 
         {!consent.accepted ? (
           <div className="mt-5 space-y-3">
-            <label className="flex items-start gap-2 text-sm text-ink-800">
+            <label className="flex items-start gap-2.5 text-sm text-ink-800">
               <input
                 type="checkbox"
                 className="mt-0.5 h-4 w-4 rounded border-ink-300"
                 checked={confirmed}
                 onChange={(event) => setConfirmed(event.target.checked)}
               />
-              I have read and agree to the declaration and consent wording above.
+              <span>
+                I have read and agree to the declaration and consent wording above.
+              </span>
             </label>
 
             {error ? (
@@ -124,10 +132,18 @@ export function ConsentPage() {
               disabled={!confirmed || accept.isPending}
               onClick={() => accept.mutate(consent.id)}
             >
+              <Check className="h-4 w-4" aria-hidden="true" />
               {accept.isPending ? "Recording…" : "Accept and continue"}
             </button>
           </div>
-        ) : null}
+        ) : (
+          <div className="mt-5">
+            <div className="inline-flex items-center gap-1.5 text-sm text-emerald-800">
+              <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+              Accepted
+            </div>
+          </div>
+        )}
 
         <InlineError message={null} />
       </section>
