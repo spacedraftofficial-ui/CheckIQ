@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, FileCheck2, LayoutDashboard, LogOut, ShieldCheck, Users, Settings } from "lucide-react";
+import { Bell, FileCheck2, LayoutDashboard, LogOut, Lock, ShieldCheck, Users, Settings } from "lucide-react";
 import { useAuth } from "../lib/auth-context";
 import { request } from "../lib/api";
 import { Footer } from "./Footer";
@@ -19,6 +19,10 @@ const staffLinks = [
   { to: "/admin/users", label: "Users", icon: Users },
   { to: "/admin/packages", label: "Packages", icon: FileCheck2 },
   { to: "/admin/config", label: "Configuration", icon: Settings },
+];
+
+const accountLinks = [
+  { to: "/change-password", label: "Change password", icon: Lock },
 ];
 
 export function Layout() {
@@ -54,6 +58,23 @@ export function Layout() {
           <nav aria-label="Main" className="order-3 w-full sm:order-2 sm:w-auto">
             <ul className="flex flex-wrap items-center gap-1">
               {links.map((link) => (
+                <li key={link.to}>
+                  <NavLink
+                    to={link.to}
+                    className={({ isActive }) =>
+                      `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                        isActive
+                          ? "bg-brand-50 text-brand-700"
+                          : "text-ink-600 hover:bg-ink-100 hover:text-ink-900"
+                      }`
+                    }
+                  >
+                    <link.icon className="h-4 w-4" aria-hidden="true" />
+                    {link.label}
+                  </NavLink>
+                </li>
+              ))}
+              {accountLinks.map((link) => (
                 <li key={link.to}>
                   <NavLink
                     to={link.to}

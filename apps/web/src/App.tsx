@@ -14,6 +14,7 @@ import { SubmitPage } from "./pages/candidate/SubmitPage";
 import { ClarificationsPage } from "./pages/candidate/ClarificationsPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { VerifyEmailPage } from "./pages/VerifyEmailPage";
+import { ChangePasswordPage } from "./pages/ChangePasswordPage";
 import { OpsDashboard } from "./pages/ops/OpsDashboard";
 import { CaseDetailPage } from "./pages/ops/CaseDetailPage";
 import { ReportPage } from "./pages/ops/ReportPage";
@@ -91,6 +92,14 @@ export function App() {
         }
       />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route
+        path="/change-password"
+        element={
+          <RequireAuth>
+            <ChangePasswordPage />
+          </RequireAuth>
+        }
+      />
 
       <Route
         element={

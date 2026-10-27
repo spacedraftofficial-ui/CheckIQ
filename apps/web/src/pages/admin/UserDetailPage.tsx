@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trash2, ArrowLeft, Mail, ShieldCheck, ToggleLeft, ToggleRight } from "lucide-react";
+import { Trash2, ArrowLeft, Mail, ShieldCheck, ToggleLeft, ToggleRight, KeyRound } from "lucide-react";
 import { ApiError, request } from "../../lib/api";
 import { ErrorState, InlineError, LoadingBlock, StatusBadge } from "../../components/States";
 
@@ -58,6 +59,7 @@ const roleLabels: Record<string, string> = {
 export function UserDetailPage() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
+  const [resetResult, setResetResult] = useState<{ temporaryPassword: string } | null>(null);
 
   const user = useQuery({
     queryKey: ["admin", "user", id],
@@ -93,6 +95,17 @@ export function UserDetailPage() {
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin", "user", id] });
+    },
+  });
+
+  const resetPassword = useMutation({
+    mutationFn: () =>
+      request<{ userId: string; temporaryPassword: string }>(`/admin/users/${id}/reset-password`, {
+        method: "POST",
+      }),
+    onSuccess: (result) => {
+      setResetResult({ temporaryPassword: result.temporaryPassword });
       void queryClient.invalidateQueries({ queryKey: ["admin", "user", id] });
     },
   });
@@ -144,25 +157,71 @@ export function UserDetailPage() {
                </>
              )}
            </button>
-           {!data.deletedAt && (
-             <button
-               type="button"
-               className="btn-danger"
-               onClick={() => {
-                 const reason = window.prompt(
-                   "Delete this user? Enter a reason (or leave blank):",
-                   "",
-                 );
-                 if (reason === null) return;
-                 void deleteUser.mutate(reason || undefined);
-               }}
-             >
-               <Trash2 className="h-4 w-4" aria-hidden={true} />
-               Delete
-             </button>
-           )}
-        </div>
+            {!data.deletedAt && (
+              <button
+                type="button"
+                className="btn-danger"
+                onClick={() => {
+                  const reason = window.prompt(
+                    "Delete this user? Enter a reason (or leave blank):",
+                    "",
+                  );
+                  if (reason === null) return;
+                  void deleteUser.mutate(reason || undefined);
+                }}
+              >
+                <Trash2 className="h-4 w-4" aria-hidden={true} />
+                Delete
+              </button>
+            )}
+            {!data.deletedAt && (
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={resetPassword.isPending}
+                onClick={() => {
+                  if (confirm("Reset this user's password? A temporary password will be generated and the user will be forced to change it on next sign-in.")) {
+                    void resetPassword.mutate();
+                  }
+                }}
+              >
+                <KeyRound className="h-4 w-4" aria-hidden={true} />
+                {resetPassword.isPending ? "Resetting…" : "Reset password"}
+              </button>
+            )}
+         </div>
       </header>
+
+      {resetPassword.isError && resetPassword.error instanceof ApiError ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">
+          {resetPassword.error.message}
+        </div>
+      ) : null}
+
+      {resetResult ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm">
+          <p className="font-medium text-amber-900">Password reset</p>
+          <p className="mt-1 text-amber-800">
+            A temporary password has been generated. Communicate it to the user out-of-band. They will
+            be forced to change it on next sign-in.
+          </p>
+          <code
+            className="mt-2 block break-all rounded bg-amber-100 p-2 text-sm font-mono text-amber-900 select-all"
+            onClick={() => navigator.clipboard.writeText(resetResult.temporaryPassword)}
+            style={{ cursor: "pointer" }}
+            title="Click to copy"
+          >
+            {resetResult.temporaryPassword}
+          </code>
+          <button
+            type="button"
+            className="btn-secondary mt-3 text-xs"
+            onClick={() => setResetResult(null)}
+          >
+            Dismiss
+          </button>
+        </div>
+      ) : null}
 
       {deactivate.isError && deactivate.error instanceof ApiError ? (
         <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">

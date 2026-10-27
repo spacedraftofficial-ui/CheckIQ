@@ -44,6 +44,12 @@ export const updateStaffUserSchema = z.object({
 });
 export type UpdateStaffUserRequest = z.infer<typeof updateStaffUserSchema>;
 
+export const adminPasswordResetResponseSchema = z.object({
+  userId: z.string().uuid(),
+  temporaryPassword: z.string(),
+});
+export type AdminPasswordResetResponse = z.infer<typeof adminPasswordResetResponseSchema>;
+
 export const roleSchema = z.object({
   code: userRoleSchema,
   name: z.string(),

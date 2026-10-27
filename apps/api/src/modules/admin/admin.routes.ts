@@ -476,7 +476,7 @@ adminRouter.post(
     const { db } = getDatabase();
     const userId = param(req, "id");
     const [user] = await db
-      .select({ id: schema.users.id, email: schema.users.email, fullName: schema.users.fullName, isEmailVerified: schema.users.isEmailVerified })
+      .select({ id: schema.users.id, email: schema.users.email, fullName: schema.users.fullName, isEmailVerified: schema.users.isEmailVerified, isActive: schema.users.isActive, deletedAt: schema.users.deletedAt })
       .from(schema.users)
       .where(eq(schema.users.id, userId))
       .limit(1);
@@ -598,6 +598,78 @@ adminRouter.delete(
     });
 
     res.status(200).json({ data: { id: user.id, deleted: true } });
+  },
+);
+
+/**
+ * POST /admin/users/:id/reset-password
+ *
+ * Generates a temporary password for a user, sets mustChangePassword, and
+ * invalidates all outstanding sessions. The temporary password is returned
+ * once and must be communicated to the user out-of-band.
+ */
+adminRouter.post(
+  "/admin/users/:id/reset-password",
+  requirePrincipal,
+  requirePermission("user:manage"),
+  validate({ params: idParam }),
+  async (req, res) => {
+    const { db } = getDatabase();
+    const userId = param(req, "id");
+
+    if (userId === req.principal!.userId) {
+      throw forbidden("You cannot reset your own password from the admin panel");
+    }
+
+    const [user] = await db
+      .select({ id: schema.users.id, email: schema.users.email, fullName: schema.users.fullName, isActive: schema.users.isActive, deletedAt: schema.users.deletedAt })
+      .from(schema.users)
+      .where(eq(schema.users.id, userId))
+      .limit(1);
+    if (!user) throw notFound("User not found");
+
+    const temporaryPassword = generatePassword();
+    const passwordHash = await hash(temporaryPassword, {
+      memoryCost: 19456,
+      timeCost: 2,
+      parallelism: 1,
+    });
+
+    await db
+      .update(schema.users)
+      .set({
+        passwordHash,
+        mustChangePassword: true,
+        sessionEpoch: sql`${schema.users.sessionEpoch} + 1`,
+      })
+      .where(eq(schema.users.id, user.id));
+
+    await recordAudit({
+      action: "USER_PASSWORD_RESET",
+      actorId: req.principal!.userId,
+      actorName: req.principal!.fullName,
+      actorRole: req.principal!.roles[0] ?? null,
+      entityType: "user",
+      entityId: user.id,
+      reason: "Password reset by administrator",
+      ipAddress: req.ipAddress ?? null,
+      userAgent: req.userAgent ?? null,
+       requestId: req.requestId,
+    });
+
+    await queueNotification({
+      event: "ADMIN_NOTICE",
+      recipientUserId: user.id,
+      recipientEmail: user.email,
+      deduplicationKey: `password-reset-${user.id}-${Date.now()}`,
+      variables: {
+        candidateName: user.fullName,
+        caseNumber: "",
+        reason: "An administrator has reset your password. Sign in with the temporary password and change it immediately.",
+      },
+    });
+
+    res.status(200).json({ data: { userId: user.id, temporaryPassword } });
   },
 );
 
@@ -1119,3 +1191,23 @@ adminRouter.put(
     res.status(201).json({ data: { id, created: true } });
   },
 );
+
+/** Generates a temporary password that satisfies the password policy. */
+function generatePassword(): string {
+  const lower = "abcdefghjkmnpqrstuvwxyz";
+  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const digits = "23456789";
+  const symbols = "!#$%&*?";
+  const all = lower + upper + digits + symbols;
+
+  const parts = [
+    lower[Math.floor(Math.random() * lower.length)],
+    upper[Math.floor(Math.random() * upper.length)],
+    digits[Math.floor(Math.random() * digits.length)],
+    symbols[Math.floor(Math.random() * symbols.length)],
+  ];
+  for (let i = 0; i < 12; i++) {
+    parts.push(all[Math.floor(Math.random() * all.length)]);
+  }
+  return parts.sort(() => Math.random() - 0.5).join("");
+}
