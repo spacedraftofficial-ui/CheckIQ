@@ -338,7 +338,15 @@ documentsRouter.get(
     );
     res.setHeader("X-Content-Type-Options", "nosniff");
     const { createReadStream } = await import("node:fs");
-    createReadStream(filePath).pipe(res);
+    const stream = createReadStream(filePath);
+    stream.on("error", (err: NodeJS.ErrnoException) => {
+      if (!res.headersSent) {
+        res.status(err.code === "ENOENT" ? 404 : 500).json({
+          error: { code: "NOT_FOUND", message: "Document file is not available on the server." },
+        });
+      }
+    });
+    stream.pipe(res);
   },
 );
 
@@ -400,7 +408,15 @@ documentsRouter.get(
     );
     res.setHeader("X-Content-Type-Options", "nosniff");
     const { createReadStream } = await import("node:fs");
-    createReadStream(filePath).pipe(res);
+    const stream = createReadStream(filePath);
+    stream.on("error", (err: NodeJS.ErrnoException) => {
+      if (!res.headersSent) {
+        res.status(err.code === "ENOENT" ? 404 : 500).json({
+          error: { code: "NOT_FOUND", message: "Document file is not available on the server." },
+        });
+      }
+    });
+    stream.pipe(res);
   },
 );
 
