@@ -19,7 +19,11 @@ export function LoginPage() {
     setSubmitting(true);
     try {
       const sessionUser = await login(email, password);
-      navigate(homeRouteFor(sessionUser), { replace: true });
+      if (sessionUser.mustChangePassword) {
+        navigate("/change-password", { replace: true });
+      } else {
+        navigate(homeRouteFor(sessionUser), { replace: true });
+      }
     } catch (caught) {
       setError(
         caught instanceof ApiError
