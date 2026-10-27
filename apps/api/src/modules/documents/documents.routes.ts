@@ -332,6 +332,10 @@ documentsRouter.get(
 
     res.setHeader("Content-Type", version.mimeType);
     res.setHeader("Content-Length", String(version.sizeBytes));
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${encodeURIComponent(version.originalFilename)}"`,
+    );
     res.setHeader("X-Content-Type-Options", "nosniff");
     const { createReadStream } = await import("node:fs");
     createReadStream(filePath).pipe(res);
