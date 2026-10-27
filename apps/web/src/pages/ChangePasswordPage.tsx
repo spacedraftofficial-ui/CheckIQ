@@ -3,8 +3,11 @@ import { Link } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { ApiError, request } from "../lib/api";
 import { InlineError } from "../components/States";
+import { useAuth } from "../lib/auth-context";
 
 export function ChangePasswordPage() {
+  const { user } = useAuth();
+  const isForcedReset = user?.mustChangePassword ?? false;
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -13,7 +16,7 @@ export function ChangePasswordPage() {
     mutationFn: () =>
       request("/auth/change-password", {
         method: "POST",
-        body: { currentPassword, newPassword },
+        body: isForcedReset ? { newPassword } : { currentPassword, newPassword },
       }),
   });
 
@@ -48,23 +51,28 @@ export function ChangePasswordPage() {
       <div className="mx-auto max-w-md">
         <h1 className="text-2xl font-bold text-ink-900">Change password</h1>
         <p className="mt-1 text-sm text-ink-600">
-          Enter your current password and a new password.
+          {isForcedReset
+            ? "Enter a new password. Your previous password has been reset by an administrator."
+            : "Enter your current password and a new password."}
         </p>
 
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-          <div>
-            <label className="label" htmlFor="currentPassword">
-              Current password
-            </label>
-            <input
-              id="currentPassword"
-              type="password"
-              className="input"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              required
-            />
-          </div>
+          {!isForcedReset ? (
+            <div>
+              <label className="label" htmlFor="currentPassword">
+                Current password
+              </label>
+              <input
+                id="currentPassword"
+                type="password"
+                className="input"
+                autoComplete="current-password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+              />
+            </div>
+          ) : null}
           <div>
             <label className="label" htmlFor="newPassword">
               New password
@@ -102,7 +110,7 @@ export function ChangePasswordPage() {
             <InlineError message={changePassword.error.message} />
           ) : null}
 
-          <button type="submit" className="btn-primary w-full" disabled={changePassword.isPending || newPassword !== confirmPassword}>
+          <button type="submit" className="btn-primary w-full" disabled={changePassword.isPending || newPassword !== confirmPassword || (!isForcedReset && !currentPassword)}>
             {changePassword.isPending ? "Changing…" : "Change password"}
           </button>
         </form>

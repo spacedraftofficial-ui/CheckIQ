@@ -53,7 +53,7 @@ export const refreshRequestSchema = z.object({});
 export type RefreshRequest = z.infer<typeof refreshRequestSchema>;
 
 export const changePasswordRequestSchema = z.object({
-  currentPassword: z.string().min(1).max(128),
+  currentPassword: z.string().min(1).max(128).optional(),
   newPassword: passwordSchema,
 });
 export type ChangePasswordRequest = z.infer<typeof changePasswordRequestSchema>;

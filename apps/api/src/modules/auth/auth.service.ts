@@ -621,7 +621,7 @@ export async function logout(
 /** Changes the signed-in user's password. */
 export async function changePassword(
   userId: string,
-  currentPassword: string,
+  currentPassword: string | undefined,
   newPassword: string,
   context: RequestContext,
 ): Promise<void> {
@@ -629,8 +629,15 @@ export async function changePassword(
   const [user] = await db.select().from(schema.users).where(eq(schema.users.id, userId)).limit(1);
   if (!user) throw notFound("User not found");
 
-  const matches = await verify(user.passwordHash, currentPassword).catch(() => false);
-  if (!matches) throw validationError("The current password is incorrect.");
+  // When mustChangePassword is set (e.g. after an admin reset), the current
+  // password is not required — the user is being forced to choose a new one.
+  if (!user.mustChangePassword) {
+    if (!currentPassword) {
+      throw validationError("The current password is required.");
+    }
+    const matches = await verify(user.passwordHash, currentPassword).catch(() => false);
+    if (!matches) throw validationError("The current password is incorrect.");
+  }
 
   const passwordHash = await hashPassword(newPassword);
   await db
