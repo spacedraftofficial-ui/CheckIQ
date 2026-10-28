@@ -38,6 +38,43 @@ const documentStatusTone: Record<string, "neutral" | "info" | "success" | "warni
 const ACCEPT_TYPES = ".pdf,.jpg,.jpeg,.png";
 const MAX_SIZE_TEXT = "Maximum 10 MB per file";
 
+/* ---------- visual helpers (styling only) ---------- */
+function accentFor(status: string, uploaded: boolean) {
+  switch (status) {
+    case "ACCEPTED":
+      return {
+        bar: "from-emerald-400 to-teal-500",
+        card: "from-emerald-50 via-white to-teal-50 ring-emerald-100 hover:shadow-emerald-200/60",
+        tile: "from-emerald-100 to-teal-100 ring-emerald-200",
+      };
+    case "REJECTED":
+    case "MISSING":
+      return {
+        bar: "from-rose-400 to-red-500",
+        card: "from-rose-50 via-white to-red-50 ring-rose-100 hover:shadow-rose-200/60",
+        tile: "from-rose-100 to-red-100 ring-rose-200",
+      };
+    case "CLARIFICATION_REQUIRED":
+      return {
+        bar: "from-amber-400 to-orange-500",
+        card: "from-amber-50 via-white to-orange-50 ring-amber-100 hover:shadow-amber-200/60",
+        tile: "from-amber-100 to-orange-100 ring-amber-200",
+      };
+    default:
+      return uploaded
+        ? {
+            bar: "from-indigo-500 to-cyan-400",
+            card: "from-indigo-50 via-white to-cyan-50 ring-indigo-100 hover:shadow-indigo-200/60",
+            tile: "from-indigo-100 to-cyan-100 ring-indigo-200",
+          }
+        : {
+            bar: "from-slate-300 to-indigo-300",
+            card: "from-slate-50 via-white to-indigo-50 ring-slate-200 hover:shadow-indigo-200/50",
+            tile: "from-slate-100 to-indigo-100 ring-slate-200",
+          };
+  }
+}
+
 function FileIconFor({ status, uploaded }: { status: string; uploaded: boolean }) {
   if (uploaded) {
     if (status === "ACCEPTED") return <FileText className="h-5 w-5 text-emerald-600" />;
@@ -51,14 +88,14 @@ function FileIconFor({ status, uploaded }: { status: string; uploaded: boolean }
 function DotToneFor(status: string, uploaded: boolean): string {
   switch (status) {
     case "ACCEPTED":
-      return "status-dot-complete";
+      return "bg-emerald-500";
     case "REJECTED":
     case "MISSING":
-      return "status-dot-problem";
+      return "bg-red-500";
     case "CLARIFICATION_REQUIRED":
-      return "status-dot-pending";
+      return "bg-amber-500";
     default:
-      return uploaded ? "status-dot-in-progress" : "status-dot-pending";
+      return uploaded ? "bg-indigo-500" : "bg-slate-400";
   }
 }
 
@@ -139,19 +176,37 @@ export function DocumentsPage() {
   if (!documents.data) return <LoadingBlock label="Loading documents" />;
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">Documents</h1>
-        <p className="mt-1.5 text-sm text-ink-600">
-          Upload each required document. If you replace a document, the earlier version is
-          kept for verification records.
-        </p>
+    <div className="space-y-8">
+      {/* Hero header */}
+      <header className="relative isolate overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-200 via-fuchsia-100 to-amber-100 px-5 py-8 shadow-xl shadow-indigo-200/60 ring-1 ring-white/70 sm:px-10 sm:py-10">
+        <div className="absolute -top-16 -left-10 -z-10 h-60 w-60 rounded-full bg-cyan-300/50 blur-3xl" aria-hidden="true" />
+        <div className="absolute -bottom-20 right-0 -z-10 h-64 w-64 rounded-full bg-fuchsia-300/50 blur-3xl" aria-hidden="true" />
+        <div className="absolute top-1/2 left-1/2 -z-10 h-48 w-48 rounded-full bg-amber-200/70 blur-3xl" aria-hidden="true" />
+        <div
+          className="absolute inset-0 -z-10 opacity-30 [background-image:radial-gradient(#6366f1_1px,transparent_1px)] [background-size:22px_22px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_80%)]"
+          aria-hidden="true"
+        />
+        <div className="relative flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-5">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/80 shadow-lg shadow-indigo-300/50 ring-1 ring-inset ring-white backdrop-blur">
+            <FileText className="h-7 w-7 text-indigo-600" aria-hidden="true" />
+          </span>
+          <div>
+            <h1 className="text-3xl font-extrabold tracking-tight text-indigo-900 sm:text-4xl">Documents</h1>
+            <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-indigo-800/80">
+              Upload each required document. If you replace a document, the earlier version is
+              kept for verification records.
+            </p>
+          </div>
+        </div>
       </header>
 
       {uploadError ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">
-          <div className="flex items-start gap-2">
-            <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+        <div
+          className="rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 to-rose-50 p-4 text-sm text-red-700 shadow-sm"
+          role="alert"
+        >
+          <div className="flex items-start gap-3">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" aria-hidden="true" />
             <span>{uploadError}</span>
           </div>
         </div>
@@ -166,27 +221,38 @@ export function DocumentsPage() {
           onRetry={() => void documents.refetch()}
         />
       ) : documents.data.length === 0 ? (
-        <div className="card p-8 text-center">
-          <FileText className="mx-auto h-10 w-10 text-ink-300" aria-hidden="true" />
+        <div className="rounded-3xl bg-gradient-to-br from-indigo-50 via-white to-fuchsia-50 p-8 text-center shadow-sm ring-1 ring-indigo-100">
+          <FileText className="mx-auto h-10 w-10 text-indigo-300" aria-hidden="true" />
           <EmptyState
             title="No documents are required for this package"
             description="Your background verification package does not require any document uploads."
           />
         </div>
       ) : (
-        <ul className="grid gap-4 sm:gap-5 lg:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid gap-4 sm:gap-5 md:grid-cols-2 xl:grid-cols-3">
           {documents.data.map((document) => {
             const uploaded = !!document.currentVersion;
             const isUploading = uploadingFor === document.id;
             const dotClass = DotToneFor(document.status, uploaded);
+            const accent = accentFor(document.status, uploaded);
             return (
-              <li key={document.id} className="card p-5 sm:p-6">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <FileIconFor status={document.status} uploaded={uploaded} />
-                    <h2 className="text-sm font-semibold text-ink-900">
-                      {document.label}
-                    </h2>
+              <li
+                key={document.id}
+                className={`relative flex min-w-0 flex-col overflow-hidden rounded-3xl bg-gradient-to-br p-5 shadow-sm ring-1 transition hover:-translate-y-0.5 hover:shadow-xl sm:p-6 ${accent.card}`}
+              >
+                <div className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${accent.bar}`} aria-hidden="true" />
+
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ring-1 ring-inset ${accent.tile}`}>
+                      <FileIconFor status={document.status} uploaded={uploaded} />
+                    </span>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className={`h-2.5 w-2.5 shrink-0 rounded-full ring-4 ring-white ${dotClass}`} aria-hidden="true" />
+                      <h2 className="text-sm font-bold text-ink-900">
+                        {document.label}
+                      </h2>
+                    </div>
                   </div>
                   <StatusBadge tone={documentStatusTone[document.status] ?? "neutral"}>
                     {document.status.replace(/_/g, " ").toLowerCase()}
@@ -194,13 +260,13 @@ export function DocumentsPage() {
                 </div>
 
                 {document.description ? (
-                  <p className="mt-1.5 text-sm text-ink-500">{document.description}</p>
+                  <p className="mt-3 text-sm leading-relaxed text-ink-500">{document.description}</p>
                 ) : null}
 
                 {document.currentVersion ? (
-                  <div className="mt-3 flex items-center gap-3">
+                  <div className="mt-4 flex items-center gap-3 rounded-2xl bg-white/80 p-3 shadow-sm ring-1 ring-inset ring-slate-200/80">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-ink-600 truncate">
+                      <p className="truncate text-sm font-medium text-ink-700">
                         {document.currentVersion.originalFilename}
                       </p>
                       <p className="text-xs text-ink-500">
@@ -211,40 +277,51 @@ export function DocumentsPage() {
                     <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotClass}`} aria-hidden="true" />
                   </div>
                 ) : (
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-full status-dot-pending" aria-hidden="true" />
+                  <div className="mt-4 flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-slate-400" aria-hidden="true" />
                     <p className="text-sm text-ink-500">Not yet uploaded</p>
                   </div>
                 )}
 
                 {document.reviewerRemarks ? (
-                  <div className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+                  <div className="mt-4 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-3.5 text-sm text-amber-900">
                     <p className="font-semibold">Reviewer remarks</p>
                     <p className="mt-0.5 text-amber-800">{document.reviewerRemarks}</p>
                   </div>
                 ) : null}
 
-                <div className="mt-4 space-y-3">
-                  <label className="label" htmlFor={"file-" + document.id}>
+                <div className="mt-5 space-y-3">
+                  <label className="mb-1.5 block text-sm font-semibold text-ink-800" htmlFor={"file-" + document.id}>
                     {document.currentVersion ? "Replace this document" : "Upload this document"}
                   </label>
-                  <input
-                    id={"file-" + document.id}
-                    type="file"
-                    accept={ACCEPT_TYPES}
-                    className="block w-full cursor-pointer text-sm text-ink-700 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-brand-700 hover:file:bg-brand-100"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      if (file) {
-                        setSelectedFiles((prev) => ({ ...prev, [document.id]: file }));
-                      }
-                    }}
-                  />
-                  <p className="hint">{MAX_SIZE_TEXT}</p>
+                  <label className="block cursor-pointer rounded-2xl border-2 border-dashed border-indigo-300 bg-white/70 px-4 py-3.5 text-sm font-medium text-ink-700 transition hover:border-fuchsia-400 hover:bg-white hover:shadow-md focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-300">
+                    <input
+                      id={"file-" + document.id}
+                      type="file"
+                      accept={ACCEPT_TYPES}
+                      className="sr-only"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (file) {
+                          setSelectedFiles((prev) => ({ ...prev, [document.id]: file }));
+                        }
+                      }}
+                    />
+                    <span className="flex items-center gap-3">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-100 to-fuchsia-100">
+                        <Upload className="h-4 w-4 text-indigo-600" aria-hidden="true" />
+                      </span>
+                      <span className="min-w-0 truncate">
+                        {selectedFiles[document.id]?.name ??
+                          (document.currentVersion ? "Click to replace file" : "Click to choose a file")}
+                      </span>
+                    </span>
+                  </label>
+                  <p className="text-xs text-ink-500">{MAX_SIZE_TEXT}</p>
 
                   <button
                     type="button"
-                    className="btn-primary btn-sm w-full"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:shadow-xl hover:shadow-fuchsia-500/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
                     disabled={isUploading || !selectedFiles[document.id]}
                     onClick={() => handleUpload(document)}
                   >
@@ -256,7 +333,7 @@ export function DocumentsPage() {
                 {document.versionCount > 0 ? (
                   <button
                     type="button"
-                    className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 underline"
+                    className="mt-4 inline-flex items-center gap-1.5 self-start rounded-lg px-2.5 py-1.5 text-sm font-semibold text-brand-700 ring-1 ring-inset ring-indigo-200 transition hover:bg-indigo-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                     onClick={() => setVersionsFor(document.id)}
                   >
                     <History className="h-4 w-4" aria-hidden="true" />
@@ -271,19 +348,20 @@ export function DocumentsPage() {
 
       {versionsFor ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-indigo-900/30 p-4 backdrop-blur-sm sm:items-center"
           role="dialog"
           aria-modal="true"
           aria-labelledby="versions-title"
         >
-          <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow-xl">
-            <div className="flex items-center justify-between">
-              <h2 id="versions-title" className="text-base font-semibold text-ink-900">
+          <div className="relative max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-gradient-to-br from-white via-white to-indigo-50 p-5 shadow-2xl shadow-indigo-300/50 ring-1 ring-indigo-100 sm:p-6">
+            <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-amber-400" aria-hidden="true" />
+            <div className="flex items-center justify-between gap-3 pt-1">
+              <h2 id="versions-title" className="text-lg font-bold text-ink-900">
                 Version history
               </h2>
               <button
                 type="button"
-                className="btn-ghost btn-sm"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-3 py-1.5 text-sm font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-200 transition hover:bg-indigo-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                 onClick={() => setVersionsFor(null)}
               >
                 <X className="h-4 w-4" aria-hidden="true" />
@@ -295,12 +373,17 @@ export function DocumentsPage() {
                 <LoadingBlock label="Loading versions" />
               </div>
             ) : (
-              <ul className="mt-4 divide-y divide-ink-200">
+              <ul className="mt-4 space-y-2.5">
                 {(versions.data ?? []).map((version) => (
-                  <li key={version.id} className="flex flex-wrap items-center gap-3 py-3">
-                    <span className="font-mono text-sm text-ink-700">v{version.versionNumber}</span>
+                  <li
+                    key={version.id}
+                    className="flex flex-wrap items-center gap-3 rounded-2xl bg-white/80 px-4 py-3 shadow-sm ring-1 ring-inset ring-indigo-100"
+                  >
+                    <span className="rounded-full bg-gradient-to-r from-indigo-500 to-fuchsia-500 px-2.5 py-0.5 font-mono text-xs font-bold text-white">
+                      v{version.versionNumber}
+                    </span>
                     <div className="min-w-0 flex-1">
-                      <span className="block text-sm text-ink-800 truncate">
+                      <span className="block truncate text-sm font-medium text-ink-800">
                         {version.originalFilename}
                       </span>
                       <span className="text-xs text-ink-500">

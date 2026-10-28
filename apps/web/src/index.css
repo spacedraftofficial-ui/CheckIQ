@@ -90,302 +90,293 @@
 
 /**
  * Core component styles.
+ *
+ * In Tailwind v4, custom classes consumed via className on elements must be
+ * declared as @utility so the scanner recognises them. @layer components
+ * classes using @apply are not registered as candidates in the build scanner.
  */
-@layer components {
-  .card {
-    @apply relative rounded-xl border border-ink-200 bg-white shadow-sm transition-all duration-200;
-  }
-
-  .card:hover {
+@utility card {
+  @apply relative rounded-xl border border-ink-200 bg-white shadow-sm transition-all duration-200;
+  &:hover {
     @apply shadow-md;
   }
+}
 
-  .card-interactive {
-    @apply card cursor-pointer;
-  }
-
-  .card-interactive:hover {
+@utility card-interactive {
+  @apply card cursor-pointer;
+  &:hover {
     @apply border-brand-300 shadow-lg ring-1 ring-brand-200;
   }
+}
 
-  .card-elevated {
-    @apply rounded-xl border border-ink-200 bg-white shadow-lg;
-  }
+@utility card-elevated {
+  @apply rounded-xl border border-ink-200 bg-white shadow-lg;
+}
 
-  .input {
-    @apply w-full rounded-lg border border-ink-300 bg-white px-3 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 transition-all duration-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 focus:outline-none;
-  }
+@utility input {
+  @apply w-full rounded-lg border border-ink-300 bg-white px-3 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 transition-all duration-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 focus:outline-none;
+}
 
-  .label {
-    @apply mb-1.5 block text-sm font-medium text-ink-800;
-  }
+@utility label {
+  @apply mb-1.5 block text-sm font-medium text-ink-800;
+}
 
-  .hint {
-    @apply mt-1 text-xs text-ink-500;
-  }
+@utility hint {
+  @apply mt-1 text-xs text-ink-500;
+}
 
-  .error-text {
-    @apply mt-1 text-sm text-red-600;
-  }
+@utility error-text {
+  @apply mt-1 text-sm text-red-600;
+}
 
-  .badge {
-    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
-  }
+@utility badge {
+  @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+}
 
-  /**
-   * Status dots — consistent visual indicator for document/item status.
-   */
-  .status-dot {
-    @apply inline-block h-2.5 w-2.5 shrink-0 rounded-full;
-  }
+/**
+ * Status dots — consistent visual indicator for document/item status.
+ */
+@utility status-dot {
+  @apply inline-block h-2.5 w-2.5 shrink-0 rounded-full;
+}
 
-  .status-dot-pending {
-    @apply bg-amber-400;
-  }
+@utility status-dot-pending {
+  @apply bg-amber-400;
+}
 
-  .status-dot-in-progress {
-    @apply bg-brand-500;
-  }
+@utility status-dot-in-progress {
+  @apply bg-brand-500;
+}
 
-  .status-dot-complete {
-    @apply bg-emerald-500;
-  }
+@utility status-dot-complete {
+  @apply bg-emerald-500;
+}
 
-  .status-dot-problem {
-    @apply bg-red-500;
-  }
+@utility status-dot-problem {
+  @apply bg-red-500;
+}
 
-  /**
-   * Decorative elements.
-   */
-  .decorative-circle {
-    @apply absolute rounded-full blur-2xl;
-  }
+/**
+ * Decorative elements.
+ */
+@utility decorative-circle {
+  @apply absolute rounded-full blur-2xl;
+}
 
-  .divider {
-    @apply relative;
-  }
-
-  .divider::before {
+@utility divider {
+  @apply relative;
+  &::before {
     content: "";
     @apply absolute inset-0 top-1/2 h-px w-full bg-ink-200;
   }
+}
 
-  /**
-   * Form field group — consistent spacing for label + input + error.
-   */
-  .form-field {
-    @apply mb-4;
-  }
-
-  .form-field:last-child {
+/**
+ * Form field group — consistent spacing for label + input + error.
+ */
+@utility form-field {
+  @apply mb-4;
+  &:last-child {
     @apply mb-0;
   }
+}
 
-  /**
-   * Progress stepper — horizontal steps with dots and connectors.
-   */
-  .step-list {
-    @apply flex flex-col gap-4;
-  }
+/**
+ * Progress stepper — horizontal steps with dots and connectors.
+ */
+@utility step-list {
+  @apply flex flex-col gap-4;
+}
 
-  .step-item {
-    @apply relative flex items-start gap-3;
-  }
-
-  .step-item:not(:last-child)::after {
+@utility step-item {
+  @apply relative flex items-start gap-3;
+  &:not(:last-child)::after {
     content: "";
     @apply absolute left-3 top-6 bottom-0 w-px bg-ink-200;
   }
+}
 
-  .step-dot {
-    @apply relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 bg-white;
-  }
+@utility step-dot {
+  @apply relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 bg-white;
+}
 
-  .step-dot-pending {
-    @apply border-ink-300 text-ink-500;
-  }
+@utility step-dot-pending {
+  @apply border-ink-300 text-ink-500;
+}
 
-  .step-dot-in-progress {
-    @apply border-brand-500 bg-brand-50 text-brand-600;
-  }
+@utility step-dot-in-progress {
+  @apply border-brand-500 bg-brand-50 text-brand-600;
+}
 
-  .step-dot-complete {
-    @apply border-emerald-500 bg-emerald-50 text-emerald-600;
-  }
+@utility step-dot-complete {
+  @apply border-emerald-500 bg-emerald-50 text-emerald-600;
+}
 
-  .step-dot-problem {
-    @apply border-red-500 bg-red-50 text-red-600;
-  }
+@utility step-dot-problem {
+  @apply border-red-500 bg-red-50 text-red-600;
+}
 
-  /**
-   * Table styling for data-heavy views.
-   */
-  .data-table {
-    @apply w-full border-collapse text-sm;
-  }
-
-  .data-table th {
+/**
+ * Table styling for data-heavy views.
+ */
+@utility data-table {
+  @apply w-full border-collapse text-sm;
+  th {
     @apply px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-ink-500;
   }
-
-  .data-table td {
+  td {
     @apply px-3 py-2 text-sm text-ink-800;
   }
-
-  .data-table tbody tr {
+  tbody tr {
     @apply border-b border-ink-200;
+    &:hover {
+      @apply bg-ink-50;
+    }
   }
+}
 
-  .data-table tbody tr:hover {
-    @apply bg-ink-50;
-  }
+/**
+ * File upload styling.
+ */
+@utility file-input {
+  @apply block w-full cursor-pointer text-sm text-ink-700 file:mr-3 file:-ml-1 file:cursor-pointer file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-brand-700 hover:file:bg-brand-100;
+}
 
-  /**
-   * File upload styling.
-   */
-  .file-input {
-    @apply block w-full cursor-pointer text-sm text-ink-700 file:mr-3 file:-ml-1 file:cursor-pointer file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-brand-700 hover:file:bg-brand-100;
-  }
+/**
+ * Custom checkbox styling.
+ */
+@utility checkbox {
+  @apply h-4 w-4 rounded border-ink-300 text-brand-600 focus:ring-brand-500;
+}
 
-  /**
-   * Custom checkbox styling.
-   */
-  .checkbox {
-    @apply h-4 w-4 rounded border-ink-300 text-brand-600 focus:ring-brand-500;
-  }
+/**
+ * Custom select styling.
+ */
+@utility select {
+  @apply w-full rounded-lg border border-ink-300 bg-white px-3 py-2.5 text-sm text-ink-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 focus:outline-none;
+}
 
-  /**
-   * Custom select styling.
-   */
-  .select {
-    @apply w-full rounded-lg border border-ink-300 bg-white px-3 py-2.5 text-sm text-ink-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 focus:outline-none;
-  }
+/**
+ * Avatar style.
+ */
+@utility avatar {
+  @apply flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-brand-700 font-semibold;
+}
 
-  /**
-   * Avatar style.
-   */
-  .avatar {
-    @apply flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-brand-700 font-semibold;
-  }
+@utility avatar-sm {
+  @apply flex h-7 w-7 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700;
+}
 
-  .avatar-sm {
-    @apply flex h-7 w-7 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700;
-  }
+/**
+ * Tag style for inline labels.
+ */
+@utility tag {
+  @apply inline-flex items-center gap-1 rounded-md px-2 py-0.75 text-xs font-medium;
+}
 
-  /**
-   * Tag style for inline labels.
-   */
-  .tag {
-    @apply inline-flex items-center gap-1 rounded-md px-2 py-0.75 text-xs font-medium;
-  }
+@utility tag-blue {
+  @apply bg-brand-100 text-brand-800;
+}
 
-  .tag-blue {
-    @apply bg-brand-100 text-brand-800;
-  }
+@utility tag-green {
+  @apply bg-emerald-100 text-emerald-800;
+}
 
-  .tag-green {
-    @apply bg-emerald-100 text-emerald-800;
-  }
+@utility tag-amber {
+  @apply bg-amber-100 text-amber-800;
+}
 
-  .tag-amber {
-    @apply bg-amber-100 text-amber-800;
-  }
+@utility tag-red {
+  @apply bg-red-100 text-red-800;
+}
 
-  .tag-red {
-    @apply bg-red-100 text-red-800;
-  }
-
-  /**
-   * Timeline styling for clarifications/messages.
-   */
-  .timeline {
-    @apply relative pl-6;
-  }
-
-  .timeline::before {
+/**
+ * Timeline styling for clarifications/messages.
+ */
+@utility timeline {
+  @apply relative pl-6;
+  &::before {
     content: "";
     @apply absolute left-2 top-0 bottom-0 w-px bg-ink-200;
   }
+}
 
-  .timeline-item {
-    @apply relative mb-4;
-  }
-
-  .timeline-item:last-child {
+@utility timeline-item {
+  @apply relative mb-4;
+  &:last-child {
     @apply mb-0;
   }
+}
 
-  .timeline-dot {
-    @apply absolute left-[-10px] top-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-white;
-  }
+@utility timeline-dot {
+  @apply absolute left-[-10px] top-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-white;
+}
 
-  .timeline-dot-own {
-    @apply bg-brand-600 text-white;
-  }
+@utility timeline-dot-own {
+  @apply bg-brand-600 text-white;
+}
 
-  .timeline-dot-other {
-    @apply bg-ink-300 text-ink-700;
-  }
+@utility timeline-dot-other {
+  @apply bg-ink-300 text-ink-700;
+}
 
-  /**
-   * Message bubbles for conversation UI.
-   */
-  .message {
-    @apply max-w-[80%] rounded-xl px-3 py-2;
-  }
+/**
+ * Message bubbles for conversation UI.
+ */
+@utility message {
+  @apply max-w-[80%] rounded-xl px-3 py-2;
+}
 
-  .message-own {
-    @apply bg-brand-600 text-white;
-  }
+@utility message-own {
+  @apply bg-brand-600 text-white;
+}
 
-  .message-other {
-    @apply bg-ink-100 text-ink-900;
-  }
+@utility message-other {
+  @apply bg-ink-100 text-ink-900;
+}
 
-  /**
-   * Progress bar.
-   */
-  .progress-bar {
-    @apply h-2 w-full overflow-hidden rounded-full bg-ink-200;
-  }
+/**
+ * Progress bar.
+ */
+@utility progress-bar {
+  @apply h-2 w-full overflow-hidden rounded-full bg-ink-200;
+}
 
-  .progress-fill {
-    @apply h-full rounded-full bg-brand-600 transition-all duration-300;
-  }
+@utility progress-fill {
+  @apply h-full rounded-full bg-brand-600 transition-all duration-300;
+}
 
-  /**
-   * Skeleton loading placeholder.
-   */
-  .skeleton {
-    @apply animate-shimmer rounded-lg bg-ink-200;
-  }
+/**
+ * Skeleton loading placeholder.
+ */
+@utility skeleton {
+  @apply animate-shimmer rounded-lg bg-ink-200;
+}
 
-  .skeleton-text {
-    @apply h-4 w-3/4 rounded;
-  }
+@utility skeleton-text {
+  @apply h-4 w-3/4 rounded;
+}
 
-  .skeleton-title {
-    @apply h-6 w-1/2 rounded;
-  }
+@utility skeleton-title {
+  @apply h-6 w-1/2 rounded;
+}
 
-  /**
-   * Decorative gradient overlay for hero sections.
-   */
-  .hero-overlay {
-    @apply absolute inset-0 -z-10 bg-gradient-to-br from-brand-50 via-brand-100/30 to-ink-50;
-  }
+/**
+ * Decorative gradient overlay for hero sections.
+ */
+@utility hero-overlay {
+  @apply absolute inset-0 -z-10 bg-gradient-to-br from-brand-50 via-brand-100/30 to-ink-50;
+}
 
-  /**
-   * Floating label pattern.
-   */
-  .float-label {
-    @apply peer w-full rounded-lg border border-ink-300 bg-white px-3 pt-5 pb-2 text-sm text-ink-900 placeholder-transparent focus:border-brand-500 focus:ring-2 focus:ring-brand-200 focus:outline-none;
-  }
+/**
+ * Floating label pattern.
+ */
+@utility float-label {
+  @apply w-full rounded-lg border border-ink-300 bg-white px-3 pt-5 pb-2 text-sm text-ink-900 placeholder-transparent focus:border-brand-500 focus:ring-2 focus:ring-brand-200 focus:outline-none;
+}
 
-  .float-label-label {
-    @apply pointer-events-none absolute left-3 top-3 text-sm text-ink-500 transition-all peer-focus:top-1 peer-focus:text-xs peer-focus:text-brand-600 peer-placeholder-shown:top-3 peer-placeholder-shown:text-sm;
-  }
+@utility float-label-label {
+  @apply pointer-events-none absolute left-3 top-3 text-sm text-ink-500 transition-all peer-focus:top-1 peer-focus:text-xs peer-focus:text-brand-600 peer-placeholder-shown:top-3 peer-placeholder-shown:text-sm;
 }
 
 /**
@@ -438,7 +429,7 @@
   overflow: hidden;
 }
 
-@utility animate-shimmer::after {
+.animate-shimmer::after {
   content: "";
   position: absolute;
   top: 0;
@@ -455,4 +446,77 @@
 
 @utility animate-bounce-in {
   animation: bounceIn 0.5s ease-out;
+}
+
+/**
+ * Premium, additive utilities for the user-facing journey.
+ * Declared as @utility so Tailwind v4's scanner recognises them. They are
+ * only referenced by candidate/auth pages and do not alter the existing
+ * shared styles that the staff/admin surfaces depend on.
+ */
+@utility surface {
+  @apply rounded-2xl border border-ink-200 bg-white shadow-sm transition-all duration-200;
+}
+
+@utility surface-solid {
+  @apply rounded-2xl border border-ink-200 bg-white shadow-xl;
+}
+
+@utility surface-elevated {
+  @apply rounded-2xl border border-ink-200 bg-white shadow-2xl;
+}
+
+@utility surface-subtle {
+  @apply rounded-2xl border border-ink-200 bg-white/80 shadow-sm;
+}
+
+@utility input-premium {
+  @apply w-full rounded-xl border border-ink-300 bg-white px-3.5 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-200 focus:outline-none;
+}
+
+@utility decorative-blob {
+  @apply absolute rounded-full blur-3xl opacity-60;
+}
+
+@utility section-header {
+  @apply mb-4 flex items-center gap-2.5;
+  h2 {
+    @apply text-base font-semibold text-ink-900;
+  }
+}
+
+@utility progress-track {
+  @apply relative mb-6 h-2 w-full overflow-hidden rounded-full bg-ink-200;
+}
+
+@utility progress-fill-track {
+  @apply h-full rounded-full bg-gradient-to-r from-brand-500 via-indigo-500 to-purple-500;
+}
+
+@utility stat-card {
+  @apply flex flex-col gap-1 rounded-xl border border-ink-200 bg-ink-50 px-4 py-3;
+}
+
+@utility badge-soft {
+  @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold;
+}
+
+@utility badge-soft-neutral {
+  @apply badge-soft bg-ink-100 text-ink-700;
+}
+
+@utility badge-soft-success {
+  @apply badge-soft bg-emerald-100 text-emerald-800;
+}
+
+@utility badge-soft-warning {
+  @apply badge-soft bg-amber-100 text-amber-800;
+}
+
+@utility badge-soft-danger {
+  @apply badge-soft bg-red-100 text-red-800;
+}
+
+@utility badge-soft-info {
+  @apply badge-soft bg-brand-100 text-brand-800;
 }

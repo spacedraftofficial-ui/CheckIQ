@@ -86,14 +86,22 @@ export function VerifyEmailPage() {
 
   return (
     <AuthLayout>
-      <div className="bg-gradient-to-br from-ink-50 to-brand-50">
+      <div className="relative isolate bg-gradient-to-br from-ink-50 via-brand-50 to-indigo-50">
+        <div
+          className="decorative-blob top-16 right-0 h-40 w-40 bg-brand-200"
+          aria-hidden="true"
+        />
+        <div
+          className="decorative-blob bottom-12 -left-10 h-36 w-36 bg-indigo-200"
+          aria-hidden="true"
+        />
         <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center px-4 py-12">
-          <div className="card border border-ink-200 p-6 sm:p-8 shadow-sm">
-            <div className="flex items-center gap-2 mb-6 justify-center">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">
+          <div className="surface-solid animate-fade-in-up">
+            <div className="p-6 sm:p-8">
+            <div className="mb-6 flex justify-center">
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600 text-xl font-bold text-white shadow-lg shadow-brand-600/20">
                 C
               </span>
-              <span className="text-lg font-bold text-ink-900">CheckIQ</span>
             </div>
 
             <div className="text-center">
@@ -153,7 +161,7 @@ export function VerifyEmailPage() {
                           type="text"
                           inputMode="numeric"
                           maxLength={1}
-                          className="h-12 w-10 rounded-lg border border-ink-300 bg-white text-center text-xl font-semibold text-ink-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 focus:outline-none"
+                          className="h-12 w-12 rounded-xl border-2 border-ink-300 bg-white text-center text-xl font-semibold text-ink-900 transition-all focus:border-brand-500 focus:ring-2 focus:ring-brand-200 focus:outline-none"
                           value={digit}
                           onChange={(e) => handleCodeChange(index, e.target.value)}
                           onKeyDown={(e) => handleKeyDown(index, e)}
@@ -186,7 +194,7 @@ export function VerifyEmailPage() {
                   <input
                     id="resend-email"
                     type="email"
-                    className="input"
+                    className="input-premium"
                     autoComplete="email"
                     placeholder="you@example.com"
                     value={resendEmail}
@@ -239,6 +247,7 @@ export function VerifyEmailPage() {
                 </Link>
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>

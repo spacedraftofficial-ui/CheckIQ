@@ -116,9 +116,24 @@ export function SignupPage() {
 
   return (
     <AuthLayout>
-      <div className="bg-gradient-to-br from-ink-50 to-brand-50">
+      <div className="relative isolate bg-gradient-to-br from-ink-50 via-brand-50 to-indigo-50">
+        <div
+          className="decorative-blob top-20 right-2 h-44 w-44 bg-brand-200"
+          aria-hidden="true"
+        />
+        <div
+          className="decorative-blob bottom-16 -left-12 h-36 w-36 bg-indigo-200"
+          aria-hidden="true"
+        />
         <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
-          <div className="card border border-ink-200 p-6 sm:p-8 shadow-sm">
+          <div className="surface-solid animate-fade-in-up">
+            <div className="p-6 sm:p-8">
+          <div className="mb-6 flex justify-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600 text-xl font-bold text-white shadow-lg shadow-brand-600/20">
+              C
+            </span>
+          </div>
+
           <h1 className="text-2xl font-bold text-ink-900">Create your account</h1>
           <p className="mt-1 text-sm text-ink-500">
             Your Candidate ID is used to identify your background verification case. It is not
@@ -142,14 +157,14 @@ export function SignupPage() {
             </div>
           ) : null}
 
-          <form className="mt-6 space-y-4" onSubmit={onSubmit} noValidate>
+          <form className="mt-6 space-y-5" onSubmit={onSubmit} noValidate>
             <div>
               <label className="label" htmlFor="candidateId">
                 Candidate ID
               </label>
               <input
                 id="candidateId"
-                className="input font-mono"
+                className="input-premium font-mono"
                 autoComplete="off"
                 spellCheck={false}
                 aria-describedby={errors.candidateId ? "candidateId-error" : undefined}
@@ -162,7 +177,7 @@ export function SignupPage() {
               <label className="label" htmlFor="fullName">
                 Full name
               </label>
-              <input id="fullName" className="input" autoComplete="name" {...register("fullName")} />
+              <input id="fullName" className="input-premium" autoComplete="name" {...register("fullName")} />
               <InlineError message={errors.fullName?.message} />
             </div>
 
@@ -174,7 +189,7 @@ export function SignupPage() {
                 <input
                   id="email"
                   type="email"
-                  className="input"
+                  className="input-premium"
                   autoComplete="email"
                   {...register("email")}
                 />
@@ -187,7 +202,7 @@ export function SignupPage() {
                 <input
                   id="mobile"
                   type="tel"
-                  className="input"
+                  className="input-premium"
                   autoComplete="tel"
                   placeholder="+91 98123 45678"
                   {...register("mobile")}
@@ -204,7 +219,7 @@ export function SignupPage() {
                 <input
                   id="password"
                   type="password"
-                  className="input"
+                  className="input-premium"
                   autoComplete="new-password"
                   {...register("password")}
                   onChange={(e) => setPasswordValue(e.target.value)}
@@ -212,15 +227,15 @@ export function SignupPage() {
                 <p className="hint">
                   At least 10 characters with upper and lower case, a digit and a symbol.
                 </p>
-                <div className="mt-2 space-y-1">
+                <div className="mt-2 space-y-1.5">
                   {passwordChecks.map((check) => (
-                    <div key={check.label} className="flex items-center gap-1.5 text-xs">
+                    <div key={check.label} className="flex items-center gap-2 text-xs">
                       {check.passed ? (
-                        <Check className="h-3 w-3 text-emerald-600" aria-hidden="true" />
+                        <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" />
                       ) : (
-                        <X className="h-3 w-3 text-ink-400" aria-hidden="true" />
+                        <X className="h-3.5 w-3.5 text-ink-400" aria-hidden="true" />
                       )}
-                      <span className={check.passed ? "text-emerald-700" : "text-ink-500"}>
+                      <span className={check.passed ? "text-emerald-700 font-medium" : "text-ink-500"}>
                         {check.label}
                       </span>
                     </div>
@@ -235,7 +250,7 @@ export function SignupPage() {
                 <input
                   id="confirmPassword"
                   type="password"
-                  className="input"
+                  className="input-premium"
                   autoComplete="new-password"
                   {...register("confirmPassword")}
                 />
@@ -243,7 +258,7 @@ export function SignupPage() {
               </div>
             </div>
 
-            <fieldset className="rounded-lg border border-ink-200 p-4">
+            <fieldset className="rounded-xl border border-ink-200 p-4">
               <legend className="px-1 text-sm font-semibold text-ink-700">
                 Role details (optional)
               </legend>
@@ -252,19 +267,19 @@ export function SignupPage() {
                   <label className="label" htmlFor="company">
                     Company
                   </label>
-                  <input id="company" className="input" {...register("company")} />
+                  <input id="company" className="input-premium" {...register("company")} />
                 </div>
                 <div>
                   <label className="label" htmlFor="department">
                     Department
                   </label>
-                  <input id="department" className="input" {...register("department")} />
+                  <input id="department" className="input-premium" {...register("department")} />
                 </div>
                 <div>
                   <label className="label" htmlFor="position">
                     Position
                   </label>
-                  <input id="position" className="input" {...register("position")} />
+                  <input id="position" className="input-premium" {...register("position")} />
                 </div>
               </div>
             </fieldset>
@@ -281,9 +296,9 @@ export function SignupPage() {
             >
               <p className="font-semibold">Check your email</p>
                <p className="mt-1">
-                 A 6-digit verification code has been sent to your inbox. Enter the code to verify your
-                 email address before signing in.
-               </p>
+                  A 6-digit verification code has been sent to your inbox. Enter the code to verify your
+                  email address before signing in.
+                </p>
               {resendMessage ? (
                 <p className={`mt-2 ${resendMessage.includes("sent") ? "text-emerald-700" : "text-amber-700"}`}>
                   {resendMessage}
@@ -314,6 +329,7 @@ export function SignupPage() {
               </Link>
             </p>
           )}
+            </div>
           </div>
         </div>
       </div>

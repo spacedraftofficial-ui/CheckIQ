@@ -32,40 +32,59 @@ export function ChangePasswordPage() {
 
   if (changePassword.isSuccess) {
     return (
-      <AuthLayout>
-        <div className="bg-gradient-to-br from-ink-50 to-brand-50">
-          <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center px-4 py-12">
-            <div className="card border border-emerald-200 bg-emerald-50 p-6 sm:p-8 text-center shadow-sm">
-              <div className="mb-4 flex justify-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
-                  <Lock className="h-6 w-6 text-emerald-600" aria-hidden="true" />
-                </div>
+    <AuthLayout>
+      <div className="relative isolate bg-gradient-to-br from-ink-50 via-brand-50 to-indigo-50">
+        <div
+          className="decorative-blob top-16 -right-8 h-40 w-40 bg-brand-200"
+          aria-hidden="true"
+        />
+        <div
+          className="decorative-blob bottom-20 -left-12 h-36 w-36 bg-indigo-200"
+          aria-hidden="true"
+        />
+        <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center px-4 py-12">
+          <div className="surface-solid animate-fade-in-up">
+            <div className="p-6 sm:p-8 text-center">
+            <div className="mb-4 flex justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
+                <Lock className="h-6 w-6 text-emerald-600" aria-hidden="true" />
               </div>
-              <h2 className="text-xl font-bold text-emerald-900">Password changed</h2>
-              <p className="mt-2 text-sm text-emerald-800">
-                Your password has been updated successfully. You will be signed out and need to
-                sign in again.
-              </p>
-              <Link
-                to="/login"
-                className="mt-4 inline-block text-sm font-semibold text-emerald-700 underline"
-              >
-                Sign in
-              </Link>
+            </div>
+            <h2 className="text-xl font-bold text-emerald-900">Password changed</h2>
+            <p className="mt-2 text-sm text-emerald-800">
+              Your password has been updated successfully. You will be signed out and need to
+              sign in again.
+            </p>
+            <Link
+              to="/login"
+              className="mt-4 inline-block text-sm font-semibold text-emerald-700 underline"
+            >
+              Sign in
+            </Link>
             </div>
           </div>
         </div>
-      </AuthLayout>
+      </div>
+    </AuthLayout>
     );
   }
 
   return (
     <AuthLayout>
-      <div className="bg-gradient-to-br from-ink-50 to-brand-50">
+      <div className="relative isolate bg-gradient-to-br from-ink-50 via-brand-50 to-indigo-50">
+        <div
+          className="decorative-blob top-16 -right-8 h-40 w-40 bg-brand-200"
+          aria-hidden="true"
+        />
+        <div
+          className="decorative-blob bottom-20 -left-12 h-36 w-36 bg-indigo-200"
+          aria-hidden="true"
+        />
         <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center px-4 py-12">
-          <div className="card border border-ink-200 p-6 sm:p-8 shadow-sm">
+          <div className="surface-solid animate-fade-in-up">
+            <div className="p-6 sm:p-8">
             <div className="mb-5 flex justify-center">
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600 text-xl font-bold text-white">
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600 text-xl font-bold text-white shadow-lg shadow-brand-600/20">
                 C
               </span>
             </div>
@@ -86,7 +105,7 @@ export function ChangePasswordPage() {
                   <input
                     id="currentPassword"
                     type="password"
-                    className="input"
+                    className="input-premium"
                     autoComplete="current-password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
@@ -101,7 +120,7 @@ export function ChangePasswordPage() {
                 <input
                   id="newPassword"
                   type="password"
-                  className="input"
+                  className="input-premium"
                   autoComplete="new-password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -119,7 +138,7 @@ export function ChangePasswordPage() {
                 <input
                   id="confirmPassword"
                   type="password"
-                  className="input"
+                  className="input-premium"
                   autoComplete="new-password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -152,6 +171,7 @@ export function ChangePasswordPage() {
                 {changePassword.isPending ? "Changing…" : "Change password"}
               </button>
             </form>
+            </div>
           </div>
         </div>
       </div>
