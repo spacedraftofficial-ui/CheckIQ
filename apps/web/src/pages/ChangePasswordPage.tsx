@@ -84,9 +84,7 @@ export function ChangePasswordPage() {
           <div className="surface-solid animate-fade-in-up">
             <div className="p-6 sm:p-8">
             <div className="mb-5 flex justify-center">
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600 text-xl font-bold text-white shadow-lg shadow-brand-600/20">
-                C
-              </span>
+              <img src="/logos/checkiq-icon.png" className="h-12 w-12" alt="CheckIQ" aria-hidden="true" />
             </div>
 
             <h1 className="text-center text-2xl font-bold text-ink-900">Change password</h1>

@@ -114,9 +114,12 @@ export function Layout() {
       >
         <div className="flex items-center justify-between px-5 pb-4 pt-6">
           <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-500 text-lg font-extrabold text-white shadow-lg shadow-blue-500/30">
-              C
-            </span>
+            <img
+              src="/logos/checkiq-icon.png"
+              className="h-11 w-11 shrink-0"
+              alt="CheckIQ"
+              aria-hidden="true"
+            />
             <div className="leading-tight">
               <p className="text-lg font-extrabold tracking-tight text-slate-900">CheckIQ</p>
               <p className="text-xs text-slate-500">{isStaff ? "Operations console" : "Candidate portal"}</p>
@@ -199,9 +202,12 @@ export function Layout() {
             </button>
 
             <div className="flex items-center gap-2 lg:hidden">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-violet-500 text-sm font-extrabold text-white">
-                C
-              </span>
+              <img
+                src="/logos/checkiq-icon.png"
+                className="h-8 w-8 shrink-0"
+                alt="CheckIQ"
+                aria-hidden="true"
+              />
               <span className="text-base font-extrabold tracking-tight text-slate-900">CheckIQ</span>
             </div>
 

@@ -67,9 +67,7 @@ export function LoginPage() {
                 aria-hidden="true"
               />
               <div className="relative flex items-center gap-3">
-                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-lg font-extrabold text-blue-600 shadow-lg">
-                  C
-                </span>
+                <img src="/logos/checkiq-icon.png" className="h-11 w-11 shrink-0" alt="CheckIQ" aria-hidden="true" />
                 <span className="text-xl font-extrabold tracking-tight">CheckIQ</span>
               </div>
 

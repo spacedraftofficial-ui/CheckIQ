@@ -38,11 +38,9 @@ export function LandingPage() {
             {/* Intro */}
             <div>
               <div className="flex items-center gap-3">
-                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-500 text-lg font-extrabold text-white shadow-lg shadow-blue-500/30">
-                  C
-                </span>
-                <span className="text-xl font-extrabold tracking-tight text-slate-900">CheckIQ</span>
-              </div>
+              <img src="/logos/checkiq-icon.png" className="h-11 w-11 shrink-0" alt="CheckIQ" aria-hidden="true" />
+              <span className="text-xl font-extrabold tracking-tight text-slate-900">CheckIQ</span>
+            </div>
 
               <span className="mt-8 inline-flex items-center rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-blue-700 shadow-sm ring-1 ring-inset ring-blue-100">
                 Candidate verification portal

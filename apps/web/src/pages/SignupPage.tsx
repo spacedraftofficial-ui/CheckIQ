@@ -8,7 +8,7 @@ import { useAuth } from "../lib/auth-context";
 import type { SignupResponse } from "../lib/auth-context";
 import { InlineError } from "../components/States";
 import { AuthLayout } from "../components/Footer";
-import { AlertCircle, Check, MailCheck, UserPlus, X } from "lucide-react";
+import { AlertCircle, Check, MailCheck, X } from "lucide-react";
 
 const signupSchema = z
   .object({
@@ -136,9 +136,7 @@ export function SignupPage() {
             <div className="h-1.5 bg-gradient-to-r from-blue-600 to-violet-500" aria-hidden="true" />
             <div className="p-6 sm:p-10">
               <div className="flex items-center gap-3">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-500 text-white shadow-lg shadow-blue-500/30">
-                  <UserPlus className="h-6 w-6" aria-hidden="true" />
-                </span>
+                <img src="/logos/checkiq-icon.png" className="h-12 w-12 shrink-0" alt="CheckIQ" aria-hidden="true" />
                 <div>
                   <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
                     Create your account
