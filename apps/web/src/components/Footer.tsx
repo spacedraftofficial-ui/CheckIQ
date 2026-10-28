@@ -1,11 +1,21 @@
 import type { ReactNode } from "react";
+import { ShieldCheck } from "lucide-react";
 
 export function Footer() {
   return (
-    <footer className="border-t border-ink-200 bg-white">
-      <div className="mx-auto max-w-7xl px-4 py-4 text-xs text-ink-500 sm:px-6">
-        CheckIQ — background verification. Candidate and verification data is handled
-        as sensitive personal information.
+    <footer className="border-t border-slate-200/80 bg-white/80 backdrop-blur-sm">
+      <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-10">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-violet-500 text-xs font-extrabold text-white shadow-sm shadow-blue-500/30">
+            C
+          </span>
+          <span className="text-sm font-bold tracking-tight text-slate-900">CheckIQ</span>
+          <span className="text-xs text-slate-500">background verification</span>
+        </div>
+        <p className="flex items-start gap-1.5 text-xs leading-relaxed text-slate-500 sm:items-center">
+          <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-500 sm:mt-0" aria-hidden="true" />
+          <span>Candidate and verification data is handled as sensitive personal information.</span>
+        </p>
       </div>
     </footer>
   );
@@ -18,7 +28,7 @@ export function Footer() {
  */
 export function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col bg-ink-50">
+    <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 via-white to-indigo-50">
       <div className="flex-1">
         {children}
       </div>
