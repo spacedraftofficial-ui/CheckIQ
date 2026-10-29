@@ -273,7 +273,17 @@ export function DocumentsPage() {
                         <button
                           type="button"
                           className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-blue-700 ring-1 ring-inset ring-blue-200 transition hover:bg-blue-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                          onClick={() => viewDocument(document.id, currentVersion!.id)}
+                          onClick={async () => {
+                            try {
+                              await viewDocument(document.id, currentVersion!.id);
+                            } catch (caught) {
+                              setUploadError(
+                                caught instanceof ApiError
+                                  ? caught.message
+                                  : "We could not open this document.",
+                              );
+                            }
+                          }}
                         >
                           <Eye className="h-4 w-4" aria-hidden="true" />
                           View
@@ -281,7 +291,17 @@ export function DocumentsPage() {
                         <button
                           type="button"
                           className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-slate-700 ring-1 ring-inset ring-slate-200 transition hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500"
-                          onClick={() => downloadDocument(document.id, currentVersion!.id)}
+                          onClick={async () => {
+                            try {
+                              await downloadDocument(document.id, currentVersion!.id);
+                            } catch (caught) {
+                              setUploadError(
+                                caught instanceof ApiError
+                                  ? caught.message
+                                  : "We could not download this document.",
+                              );
+                            }
+                          }}
                         >
                           <Download className="h-4 w-4" aria-hidden="true" />
                           Download

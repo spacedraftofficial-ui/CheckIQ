@@ -173,11 +173,21 @@ export async function resetPassword(code: string, newPassword: string): Promise<
 }
 
 /** Downloads a stored document version (triggers a browser download). */
-export function downloadDocument(documentId: string, versionId: string): void {
-  window.location.href = `${API_BASE}/documents/${documentId}/versions/${versionId}/download`;
+export async function downloadDocument(documentId: string, versionId: string): Promise<void> {
+  const blob = await apiBlob(`/documents/${documentId}/versions/${versionId}/download`);
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "";
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
 }
 
 /** Opens a document version inline in a new tab for viewing. */
-export function viewDocument(documentId: string, versionId: string): void {
-  window.open(`${API_BASE}/documents/${documentId}/versions/${versionId}/view`, "_blank");
+export async function viewDocument(documentId: string, versionId: string): Promise<void> {
+  const blob = await apiBlob(`/documents/${documentId}/versions/${versionId}/view`);
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank");
 }
