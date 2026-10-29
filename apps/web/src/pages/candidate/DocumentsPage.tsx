@@ -36,7 +36,8 @@ const documentStatusTone: Record<string, "neutral" | "info" | "success" | "warni
 };
 
 const ACCEPT_TYPES = ".pdf,.jpg,.jpeg,.png";
-const MAX_SIZE_TEXT = "Maximum 10 MB per file";
+const MAX_SIZE_TEXT = "Maximum 3 MB per file";
+const MAX_SIZE_BYTES = 3 * 1024 * 1024;
 
 /* ---------- visual helpers (styling only) ---------- */
 function accentFor(status: string, uploaded: boolean) {
@@ -335,9 +336,14 @@ export function DocumentsPage() {
                         className="sr-only"
                         onChange={(event) => {
                           const file = event.target.files?.[0];
-                          if (file) {
-                            setSelectedFiles((prev) => ({ ...prev, [document.id]: file }));
+                          if (!file) return;
+                          if (file.size > MAX_SIZE_BYTES) {
+                            setUploadError(
+                              `File exceeds the maximum size of ${MAX_SIZE_TEXT.toLowerCase()}. Please choose a smaller file.`,
+                            );
+                            return;
                           }
+                          setSelectedFiles((prev) => ({ ...prev, [document.id]: file }));
                         }}
                       />
                       <span className="flex items-center gap-3">

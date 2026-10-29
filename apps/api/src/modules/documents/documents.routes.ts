@@ -22,7 +22,7 @@ export const documentsRouter = Router();
 const upload = multer({
   dest: temporaryDirectory(),
   limits: {
-    fileSize: 10 * 1024 * 1024,
+    fileSize: 3 * 1024 * 1024,
     files: 10,
   },
 });
