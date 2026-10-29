@@ -87,6 +87,7 @@ export const ROLE_DEFINITIONS: Record<UserRole, { name: string; description: str
     name: "Administrator",
     description: "Manages users, categories, packages, configuration and scoring rules.",
     permissions: [
+      "case:manage",
       "case:read:assigned",
       "case:read:any",
       "case:assign",
@@ -114,6 +115,7 @@ export const ROLE_DEFINITIONS: Record<UserRole, { name: string; description: str
     name: "Super Administrator",
     description: "System governance, role and permission management, privileged overrides.",
     permissions: [
+      "case:manage",
       "case:read:own",
       "case:read:assigned",
       "case:read:any",
