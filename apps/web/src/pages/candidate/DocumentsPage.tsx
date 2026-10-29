@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Upload, History, X, FileText, AlertCircle, FileImage, File } from "lucide-react";
-import { ApiError, request } from "../../lib/api";
+import { Upload, History, X, FileText, AlertCircle, FileImage, File, Download, Eye } from "lucide-react";
+import { ApiError, downloadDocument, request, viewDocument } from "../../lib/api";
 import { EmptyState, ErrorState, LoadingBlock, StatusBadge } from "../../components/States";
 
 interface DocumentVersion {
@@ -229,6 +229,7 @@ export function DocumentsPage() {
         <ul className="grid gap-4 sm:gap-5 md:grid-cols-2 xl:grid-cols-3">
           {documents.data.map((document) => {
             const uploaded = !!document.currentVersion;
+            const currentVersion = document.currentVersion;
             const isUploading = uploadingFor === document.id;
             const dotClass = DotToneFor(document.status, uploaded);
             const accent = accentFor(document.status, uploaded);
@@ -268,7 +269,25 @@ export function DocumentsPage() {
                           {document.currentVersion.versionNumber}
                         </p>
                       </div>
-                      <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotClass}`} aria-hidden="true" />
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-blue-700 ring-1 ring-inset ring-blue-200 transition hover:bg-blue-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                          onClick={() => viewDocument(document.id, currentVersion!.id)}
+                        >
+                          <Eye className="h-4 w-4" aria-hidden="true" />
+                          View
+                        </button>
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-slate-700 ring-1 ring-inset ring-slate-200 transition hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500"
+                          onClick={() => downloadDocument(document.id, currentVersion!.id)}
+                        >
+                          <Download className="h-4 w-4" aria-hidden="true" />
+                          Download
+                        </button>
+                        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotClass}`} aria-hidden="true" />
+                      </div>
                     </div>
                   ) : (
                     <div className="mt-4 flex items-center gap-2">

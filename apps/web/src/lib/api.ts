@@ -171,3 +171,13 @@ export async function forgotPassword(email: string): Promise<{ sent: boolean; me
 export async function resetPassword(code: string, newPassword: string): Promise<{ reset: boolean }> {
   return request("/auth/reset-password", { body: { code, newPassword }, auth: false });
 }
+
+/** Downloads a stored document version (triggers a browser download). */
+export function downloadDocument(documentId: string, versionId: string): void {
+  window.location.href = `${API_BASE}/documents/${documentId}/versions/${versionId}/download`;
+}
+
+/** Opens a document version inline in a new tab for viewing. */
+export function viewDocument(documentId: string, versionId: string): void {
+  window.open(`${API_BASE}/documents/${documentId}/versions/${versionId}/view`, "_blank");
+}
