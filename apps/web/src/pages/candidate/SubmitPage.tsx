@@ -46,9 +46,10 @@ export function SubmitPage() {
         body: { idempotencyKey: key, confirmDeclaration: true },
       });
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setSubmitError(null);
       setResult(data);
+      await readiness.refetch();
     },
     onError: (error) => {
       if (error instanceof ApiError) {
@@ -67,44 +68,6 @@ export function SubmitPage() {
         message={readiness.error instanceof Error ? readiness.error.message : undefined}
         onRetry={() => void readiness.refetch()}
       />
-    );
-  }
-
-  if (result) {
-    return (
-      <div className="mx-auto max-w-2xl space-y-6">
-        <div className="relative isolate overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-50 via-white to-blue-50 px-5 py-10 text-center shadow-sm ring-1 ring-emerald-100 sm:px-10 sm:py-12">
-          <div className="absolute -left-10 -top-16 -z-10 h-60 w-60 rounded-full bg-emerald-200/50 blur-3xl" aria-hidden="true" />
-          <div className="absolute -bottom-20 right-0 -z-10 h-64 w-64 rounded-full bg-blue-200/50 blur-3xl" aria-hidden="true" />
-          <div className="mb-5 flex justify-center">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg shadow-emerald-500/30 ring-8 ring-emerald-100">
-              <CheckCircle2 className="h-10 w-10 text-white" aria-hidden="true" />
-            </div>
-          </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-            {result.alreadySubmitted ? "Already submitted" : "Submission received"}
-          </h1>
-          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-slate-600">
-            Case{" "}
-            <span className="rounded-md bg-white px-1.5 py-0.5 font-mono font-semibold text-blue-700 ring-1 ring-inset ring-blue-100">
-              {result.caseNumber}
-            </span>{" "}
-            was submitted on{" "}
-            {new Date(result.submittedAt).toLocaleString(undefined, {
-              dateStyle: "medium",
-              timeStyle: "short",
-            })}
-            . You will be notified if anything further is required.
-          </p>
-          <button
-            type="button"
-            className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:from-blue-700 hover:to-violet-600 hover:shadow-xl hover:shadow-blue-500/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 sm:w-auto"
-            onClick={() => navigate("/dashboard", { replace: true })}
-          >
-            Back to overview
-          </button>
-        </div>
-      </div>
     );
   }
 
@@ -147,6 +110,18 @@ export function SubmitPage() {
           : undefined,
       to: "/clarifications",
     },
+    {
+      label: "Submitted",
+      done: result !== null,
+      detail:
+        result !== null
+          ? "Case " + result.caseNumber + " submitted on " +
+            new Date(result.submittedAt).toLocaleString(undefined, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })
+          : undefined,
+    },
   ];
 
   const doneCount = items.filter((i) => i.done).length;
@@ -163,7 +138,9 @@ export function SubmitPage() {
             <ClipboardCheck className="h-7 w-7 text-white" aria-hidden="true" />
           </span>
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">Submit for verification</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+              Submit for verification
+            </h1>
             <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-slate-600">
               Review the checklist, then confirm. You will not be able to edit submitted
               information unless the verifier asks for a clarification.
@@ -171,6 +148,41 @@ export function SubmitPage() {
           </div>
         </div>
       </header>
+
+      {/* Submission result banner */}
+      {result ? (
+        <div className="relative isolate overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-50 via-white to-blue-50 px-5 py-8 text-center shadow-sm ring-1 ring-emerald-100 sm:px-10 sm:py-10">
+          <div className="absolute -left-10 -top-16 -z-10 h-60 w-60 rounded-full bg-emerald-200/50 blur-3xl" aria-hidden="true" />
+          <div className="absolute -bottom-20 right-0 -z-10 h-64 w-64 rounded-full bg-blue-200/50 blur-3xl" aria-hidden="true" />
+          <div className="mb-4 flex justify-center">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg shadow-emerald-500/30 ring-8 ring-emerald-100">
+              <CheckCircle2 className="h-10 w-10 text-white" aria-hidden="true" />
+            </div>
+          </div>
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+            {result.alreadySubmitted ? "Already submitted" : "Submission received"}
+          </h1>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-600">
+            Case{" "}
+            <span className="rounded-md bg-white px-1.5 py-0.5 font-mono font-semibold text-blue-700 ring-1 ring-inset ring-blue-100">
+              {result.caseNumber}
+            </span>{" "}
+            was submitted on{" "}
+            {new Date(result.submittedAt).toLocaleString(undefined, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+            . You will be notified if anything further is required.
+          </p>
+          <button
+            type="button"
+            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:from-blue-700 hover:to-violet-600 hover:shadow-xl hover:shadow-blue-500/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 sm:w-auto"
+            onClick={() => navigate("/dashboard", { replace: true })}
+          >
+            Back to overview
+          </button>
+        </div>
+      ) : null}
 
       {/* Checklist */}
       <section className="overflow-hidden rounded-3xl bg-white shadow-md shadow-slate-200/60 ring-1 ring-slate-200">
@@ -246,55 +258,57 @@ export function SubmitPage() {
         </div>
       </section>
 
-      {/* Declaration */}
-      <section className="relative rounded-3xl bg-gradient-to-br from-blue-50 via-white to-violet-50 p-5 pt-8 shadow-md shadow-blue-100/60 ring-2 ring-blue-200 sm:p-8 sm:pt-9">
-        <div className="absolute -top-3.5 left-5 rounded-full bg-gradient-to-r from-blue-600 to-violet-500 px-3.5 py-1 text-xs font-bold text-white shadow-md sm:left-8">
-          Declaration
-        </div>
-        <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-white p-4 text-sm font-medium text-slate-800 ring-1 ring-inset ring-blue-100 transition hover:bg-blue-50/50 has-[:checked]:bg-blue-50 has-[:checked]:ring-blue-400">
-          <input
-            type="checkbox"
-            className="mt-0.5 h-5 w-5 shrink-0 rounded-md border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
-            checked={confirmed}
-            onChange={(event) => setConfirmed(event.target.checked)}
-          />
-          <span>
-            I confirm that the information and documents I have provided are true and
-            complete to the best of my knowledge.
-          </span>
-        </label>
-
-        {submitError ? (
-          <div
-            className="mt-4 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800"
-            role="alert"
-          >
-            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" aria-hidden="true" />
-            <div>
-              <p className="font-semibold">Your submission was not accepted</p>
-              <p className="mt-1">{submitError}</p>
-            </div>
+      {/* Declaration (hidden after submission) */}
+      {!result ? (
+        <section className="relative rounded-3xl bg-gradient-to-br from-blue-50 via-white to-violet-50 p-5 pt-8 shadow-md shadow-blue-100/60 ring-2 ring-blue-200 sm:p-8 sm:pt-9">
+          <div className="absolute -top-3.5 left-5 rounded-full bg-gradient-to-r from-blue-600 to-violet-500 px-3.5 py-1 text-xs font-bold text-white shadow-md sm:left-8">
+            Declaration
           </div>
-        ) : null}
+          <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-white p-4 text-sm font-medium text-slate-800 ring-1 ring-inset ring-blue-100 transition hover:bg-blue-50/50 has-[:checked]:bg-blue-50 has-[:checked]:ring-blue-400">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-5 w-5 shrink-0 rounded-md border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
+              checked={confirmed}
+              onChange={(event) => setConfirmed(event.target.checked)}
+            />
+            <span>
+              I confirm that the information and documents I have provided are true and
+              complete to the best of my knowledge.
+            </span>
+          </label>
 
-        <InlineError message={null} />
+          {submitError ? (
+            <div
+              className="mt-4 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800"
+              role="alert"
+            >
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" aria-hidden="true" />
+              <div>
+                <p className="font-semibold">Your submission was not accepted</p>
+                <p className="mt-1">{submitError}</p>
+              </div>
+            </div>
+          ) : null}
 
-        <button
-          type="button"
-          className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:from-blue-700 hover:to-violet-600 hover:shadow-xl hover:shadow-blue-500/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 disabled:shadow-none"
-          disabled={!data.ready || !confirmed || submit.isPending}
-          onClick={() => submit.mutate()}
-        >
-          <Send className="h-4 w-4" aria-hidden="true" />
-          {submit.isPending ? "Submitting…" : "Submit for verification"}
-        </button>
+          <InlineError message={null} />
 
-        {!data.ready ? (
-          <p className="mt-3 rounded-xl bg-amber-50 px-3.5 py-2 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-200">
-            Complete every item in the checklist before you can submit.
-          </p>
-        ) : null}
-      </section>
+          <button
+            type="button"
+            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:from-blue-700 hover:to-violet-600 hover:shadow-xl hover:shadow-blue-500/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 disabled:shadow-none"
+            disabled={!data.ready || !confirmed || submit.isPending}
+            onClick={() => submit.mutate()}
+          >
+            <Send className="h-4 w-4" aria-hidden="true" />
+            {submit.isPending ? "Submitting…" : "Submit for verification"}
+          </button>
+
+          {!data.ready ? (
+            <p className="mt-3 rounded-xl bg-amber-50 px-3.5 py-2 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-200">
+              Complete every item in the checklist before you can submit.
+            </p>
+          ) : null}
+        </section>
+      ) : null}
     </div>
   );
 }

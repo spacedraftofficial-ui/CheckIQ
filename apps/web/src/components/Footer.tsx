@@ -6,9 +6,7 @@ export function Footer() {
     <footer className="border-t border-slate-200/80 bg-white/80 backdrop-blur-sm">
       <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-10">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-violet-500 text-xs font-extrabold text-white shadow-sm shadow-blue-500/30">
-            C
-          </span>
+          <img src="/logos/checkiq-icon.png" className="h-7 w-7 shrink-0" alt="CheckIQ" aria-hidden="true" />
           <span className="text-sm font-bold tracking-tight text-slate-900">CheckIQ</span>
           <span className="text-xs text-slate-500">background verification</span>
         </div>
