@@ -172,6 +172,72 @@ export async function resetPassword(code: string, newPassword: string): Promise<
   return request("/auth/reset-password", { body: { code, newPassword }, auth: false });
 }
 
+/** Administratively disables or re-enables a case. */
+export async function toggleCaseDisable(caseId: string, disabled: boolean, reason?: string): Promise<{ disabled: boolean }> {
+  return request(`/admin/cases/${caseId}`, {
+    method: "PATCH",
+    body: { disabled, reason },
+  });
+}
+
+/** Lists disabled cases from the case history view. */
+export async function fetchCaseHistory(params: {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  status?: string;
+}): Promise<{
+  data: Array<{
+    id: string;
+    caseNumber: string;
+    candidateId: string;
+    candidateName: string;
+    company: string | null;
+    department: string | null;
+    position: string | null;
+    status: string;
+    disabledAt: string | null;
+    disabled: boolean;
+    assignedVerifierId: string | null;
+    assignedVerifierName: string | null;
+    score: number | null;
+    scoreOutcome: string | null;
+    submittedAt: string | null;
+    updatedAt: string;
+    openClarificationCount: number;
+  }>;
+  meta: { page: number; pageSize: number; total: number; totalPages: number };
+}> {
+  const qs = toQueryString({
+    page: String(params.page ?? 1),
+    pageSize: String(params.pageSize ?? 25),
+    ...(params.search ? { search: params.search } : {}),
+    ...(params.status ? { status: params.status } : {}),
+  });
+  return request<{
+    data: Array<{
+      id: string;
+      caseNumber: string;
+      candidateId: string;
+      candidateName: string;
+      company: string | null;
+      department: string | null;
+      position: string | null;
+      status: string;
+      disabledAt: string | null;
+      disabled: boolean;
+      assignedVerifierId: string | null;
+      assignedVerifierName: string | null;
+      score: number | null;
+      scoreOutcome: string | null;
+      submittedAt: string | null;
+      updatedAt: string;
+      openClarificationCount: number;
+    }>;
+    meta: { page: number; pageSize: number; total: number; totalPages: number };
+  }>(`/admin/cases/history${qs}`);
+}
+
 /** Downloads a stored document version (triggers a browser download). */
 export async function downloadDocument(documentId: string, versionId: string): Promise<void> {
   const blob = await apiBlob(`/documents/${documentId}/versions/${versionId}/download`);

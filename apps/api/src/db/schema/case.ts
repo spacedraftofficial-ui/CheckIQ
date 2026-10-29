@@ -50,6 +50,8 @@ export const bgvCases = mysqlTable(
     verificationStartedAt: timestamp("verification_started_at", { mode: "date", fsp: 3 }),
     verificationCompletedAt: timestamp("verification_completed_at", { mode: "date", fsp: 3 }),
     closedAt: timestamp("closed_at", { mode: "date", fsp: 3 }),
+    /** When set, the case is administratively disabled and excluded from the active queue. */
+    disabledAt: timestamp("disabled_at", { mode: "date", fsp: 3 }),
     createdAt: timestamp("created_at", { mode: "date", fsp: 3 }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow().onUpdateNow(),
   },
@@ -57,6 +59,7 @@ export const bgvCases = mysqlTable(
     uniqueIndex("uq_bgv_cases_number").on(t.caseNumber),
     index("ix_bgv_cases_profile").on(t.profileId),
     index("ix_bgv_cases_status").on(t.status),
+    index("ix_bgv_cases_disabled").on(t.disabledAt),
     index("ix_bgv_cases_verifier").on(t.assignedVerifierId),
     index("ix_bgv_cases_reviewer").on(t.assignedReviewerId),
     index("ix_bgv_cases_submitted_at").on(t.submittedAt),

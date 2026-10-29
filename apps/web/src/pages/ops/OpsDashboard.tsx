@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Search, AlertTriangle } from "lucide-react";
 import { request, requestPage, toQueryString } from "../../lib/api";
-import { EmptyState, ErrorState, LoadingBlock, StatusBadge } from "../../components/States";
+import { toggleCaseDisable, fetchCaseHistory } from "../../lib/api";
+import { EmptyState, ErrorState, InlineError, LoadingBlock, StatusBadge } from "../../components/States";
 
 interface CaseListItem {
   id: string;
@@ -14,6 +15,8 @@ interface CaseListItem {
   department: string | null;
   position: string | null;
   status: string;
+  disabledAt: string | null;
+  disabled: boolean;
   assignedVerifierName: string | null;
   score: number | null;
   scoreOutcome: string | null;
@@ -58,9 +61,23 @@ const queueGroups: { key: string; label: string }[] = [
 ];
 
 export function OpsDashboard() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("");
   const [page, setPage] = useState(1);
+  const [confirmCaseId, setConfirmCaseId] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<"disable" | "enable">("disable");
+  const [view, setView] = useState<"active" | "history">("active");
+
+  const disableCase = useMutation({
+    mutationKey: ["disable-case"],
+    mutationFn: ({ id, disabled }: { id: string; disabled: boolean }) =>
+      toggleCaseDisable(id, disabled),
+    onSuccess: async () => {
+      setConfirmCaseId(null);
+      await queryClient.invalidateQueries({ queryKey: ["ops", "cases"] });
+    },
+  });
 
   const counts = useQuery({
     queryKey: ["ops", "counts"],
@@ -68,17 +85,21 @@ export function OpsDashboard() {
   });
 
   const cases = useQuery({
-    queryKey: ["ops", "cases", search, status, page],
+    queryKey: ["ops", "cases", view, search, status, page],
     queryFn: () =>
-      requestPage<CaseListItem>(
-        `/cases${toQueryString({
-          search: search || undefined,
-          status: status || undefined,
-          page,
-          pageSize: 25,
-        })}`,
-      ),
-    refetchInterval: 30_000,
+      (view === "history"
+        ? fetchCaseHistory({ page, pageSize: 25, search, status })
+        : requestPage<CaseListItem>(
+            `/cases${toQueryString({
+              search: search || undefined,
+              status: status || undefined,
+              page,
+              pageSize: 25,
+            })}`,
+          )) as Promise<{
+        data: CaseListItem[];
+        meta: { page: number; pageSize: number; total: number; totalPages: number };
+      }>,
   });
 
   return (
@@ -90,7 +111,25 @@ export function OpsDashboard() {
         </p>
       </header>
 
-      <section aria-label="Queue counts" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => setView("active")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition ${view === "active" ? "bg-brand-600 text-white" : "bg-ink-50 text-ink-700 hover:bg-ink-100"}`}
+        >
+          Active cases
+        </button>
+        <button
+          type="button"
+          onClick={() => setView("history")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition ${view === "history" ? "bg-brand-600 text-white" : "bg-ink-50 text-ink-700 hover:bg-ink-100"}`}
+        >
+          Case history (disabled)
+        </button>
+      </div>
+
+      {view === "active" && (
+        <section aria-label="Queue counts" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {counts.isLoading ? (
           <div className="sm:col-span-2 lg:col-span-4">
             <LoadingBlock label="Loading queue counts" />
@@ -118,6 +157,7 @@ export function OpsDashboard() {
           ))
         )}
       </section>
+      )}
 
       <section className="card p-4">
         <form
@@ -214,10 +254,11 @@ export function OpsDashboard() {
                    <th scope="col" className="px-4 py-3">Score (%)</th>
                    <th scope="col" className="px-4 py-3">Documents</th>
                   <th scope="col" className="px-4 py-3">Updated</th>
+                  <th scope="col" className="px-4 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-ink-200">
-                {(cases.data?.data ?? []).map((item) => (
+                {(cases.data?.data ?? []).map((item: CaseListItem) => (
                   <tr key={item.id} className="hover:bg-ink-50">
                     <td className="px-4 py-3">
                       <Link
@@ -262,6 +303,19 @@ export function OpsDashboard() {
                     <td className="px-4 py-3 text-xs text-ink-500">
                       {new Date(item.updatedAt).toLocaleDateString()}
                     </td>
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        className="btn-secondary text-sm"
+                        disabled={disableCase.isPending}
+                        onClick={() => {
+                          setConfirmCaseId(item.id);
+                          setConfirmAction(item.disabled ? "enable" : "disable");
+                        }}
+                      >
+                        {item.disabled ? "Enable" : "Disable"}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -295,6 +349,99 @@ export function OpsDashboard() {
           </nav>
         </>
       )}
+      {confirmCaseId && (
+        <ConfirmDialog
+          isOpen={true}
+          title={confirmAction === "disable" ? "Disable this case?" : "Enable this case?"}
+          message={
+            confirmAction === "disable"
+              ? "This will exclude the case from the active verification queue. It will appear in case history instead."
+              : "This will return the case to the active verification queue."
+          }
+          actionLabel={confirmAction === "disable" ? "Disable case" : "Enable case"}
+          actionTone="danger"
+          onClose={() => setConfirmCaseId(null)}
+          onConfirm={async () => {
+            const target = itemById(cases.data?.data, confirmCaseId);
+            if (target) {
+              await disableCase.mutateAsync({ id: target.id, disabled: confirmAction === "disable" });
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function itemById(casesData: CaseListItem[] | undefined, id: string): { id: string; disabled: boolean } | undefined {
+  return (casesData ?? []).find((c: CaseListItem) => c.id === id);
+}
+
+function ConfirmDialog({
+  isOpen,
+  title,
+  message,
+  actionLabel,
+  actionTone = "danger",
+  onClose,
+  onConfirm,
+}: {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  actionLabel: string;
+  actionTone?: "danger" | "warning" | "primary";
+  onClose: () => void;
+  onConfirm: () => Promise<void>;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!isOpen) return null;
+
+  const toneClasses = {
+    danger: "btn-danger",
+    warning: "btn-secondary",
+    primary: "btn-primary",
+  };
+
+  const handleConfirm = async () => {
+    setConfirming(true);
+    setError(null);
+    try {
+      await onConfirm();
+      onClose();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "An error occurred.");
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="mt-1 h-5 w-5 flex-shrink-0 text-amber-600" aria-hidden="true" />
+          <div>
+            <h3 id="confirm-title" className="text-lg font-semibold text-ink-900">
+              {title}
+            </h3>
+            <p className="mt-1 text-sm text-ink-600">{message}</p>
+          </div>
+        </div>
+
+        {error && <InlineError message={error} />}
+
+        <div className="mt-6 flex justify-end gap-2">
+          <button type="button" className="btn-secondary" disabled={confirming} onClick={onClose}>
+            Cancel
+          </button>
+          <button type="button" className={toneClasses[actionTone]} disabled={confirming} onClick={handleConfirm}>
+            {confirming ? "Processing…" : actionLabel}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

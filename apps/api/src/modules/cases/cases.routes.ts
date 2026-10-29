@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { and, asc, count, desc, eq, gte, inArray, like, lte, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, isNull, like, lte, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { caseFiltersSchema, submitCaseRequestSchema } from "@checkiq/contracts";
 import { getDatabase, schema } from "../../db/client.js";
@@ -75,6 +75,7 @@ casesRouter.get(
     const filters = req.query as unknown as z.infer<typeof caseFiltersSchema>;
 
     const conditions: SQL[] = [];
+    conditions.push(isNull(schema.bgvCases.disabledAt));
     const scope = caseScopePredicate(req.principal!);
     if (scope) conditions.push(scope);
 
@@ -153,6 +154,7 @@ casesRouter.get(
           WHERE ${schema.clarificationRequests.caseId} = ${schema.bgvCases.id}
             AND ${schema.clarificationRequests.status} IN ('OPEN', 'RESPONDED')
         ), 0)`,
+        disabledAt: schema.bgvCases.disabledAt,
       })
       .from(schema.bgvCases)
       .innerJoin(
@@ -184,6 +186,8 @@ casesRouter.get(
         updatedAt: row.updatedAt.toISOString(),
         documentCompletion: row.documentCompletion ? Number(row.documentCompletion) : 0,
         openClarificationCount: Number(row.openClarificationCount),
+        disabledAt: row.disabledAt?.toISOString() ?? null,
+        disabled: row.disabledAt !== null,
       })),
       meta: {
         page: filters.page,

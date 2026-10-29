@@ -1,10 +1,11 @@
 ﻿import { Router } from "express";
 import { hash } from "@node-rs/argon2";
-import { and, asc, count, desc, eq, gte, isNull, like, lte, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, like, lte, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import {
   adminUserListSchema,
   auditFiltersSchema,
+  caseFiltersSchema,
   createScoringConfigSchema,
   createStaffUserSchema,
   updateStaffUserSchema,
@@ -25,7 +26,12 @@ import { USER_ROLES } from "@checkiq/contracts";
 export const adminRouter = Router();
 
 const idParam = z.object({ id: z.string().uuid() });
+const caseIdParam = z.object({ caseId: z.string().uuid() });
 const deleteUserBody = z.object({ reason: z.string().trim().max(1000).optional() }).strict().default({});
+const caseDisableBody = z
+  .object({ disabled: z.boolean(), reason: z.string().trim().max(1000).optional() })
+  .strict()
+  .default({ disabled: false });
 const configParam = z.object({ key: z.string().min(1).max(96) });
 const templateParam = z.object({
   event: z.string().min(1).max(48),
@@ -671,6 +677,185 @@ adminRouter.post(
     });
 
     res.status(200).json({ data: { userId: user.id, temporaryPassword } });
+  },
+);
+
+/**
+ * PATCH /admin/cases/:caseId
+ *
+ * Administratively disables or re-enables a background verification case.
+ * Disabled cases are excluded from the active case queue and appear in the
+ * case history view instead. Only a SUPER_ADMINISTRATOR may disable a case.
+ */
+adminRouter.patch(
+  "/admin/cases/:caseId",
+  requirePrincipal,
+  requirePermission("case:manage"),
+  validate({ params: caseIdParam, body: caseDisableBody }),
+  async (req, res) => {
+    const { db } = getDatabase();
+    const caseId = param(req, "caseId");
+    const { disabled, reason } = req.body as z.infer<typeof caseDisableBody>;
+
+    const [caseRow] = await db
+      .select({
+        id: schema.bgvCases.id,
+        caseNumber: schema.bgvCases.caseNumber,
+        disabledAt: schema.bgvCases.disabledAt,
+        status: schema.bgvCases.status,
+        version: schema.bgvCases.version,
+      })
+      .from(schema.bgvCases)
+      .where(eq(schema.bgvCases.id, caseId))
+      .limit(1);
+    if (!caseRow) throw notFound("Case not found");
+
+    // No-op when already in the desired state.
+    if (caseRow.disabledAt && disabled) {
+      res.status(200).json({ data: { id: caseRow.id, disabled: true } });
+      return;
+    }
+    if (!caseRow.disabledAt && !disabled) {
+      res.status(200).json({ data: { id: caseRow.id, disabled: false } });
+      return;
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(schema.bgvCases)
+        .set({
+          disabledAt: disabled ? new Date() : null,
+          version: caseRow.version + 1,
+        })
+        .where(eq(schema.bgvCases.id, caseId));
+
+      await recordAudit(
+        {
+          action: disabled ? "CASE_DISABLED" : "CASE_ENABLED",
+          actorId: req.principal!.userId,
+          actorName: req.principal!.fullName,
+          actorRole: req.principal!.roles[0] ?? null,
+          entityType: "bgv_case",
+          entityId: caseId,
+          caseId,
+          previousValue: { disabledAt: caseRow.disabledAt?.toISOString() ?? null },
+          newValue: { disabledAt: disabled ? new Date().toISOString() : null },
+          reason: reason ?? (disabled ? "Case disabled by administrator" : "Case re-enabled by administrator"),
+          ipAddress: req.ipAddress ?? null,
+          userAgent: req.userAgent ?? null,
+          requestId: req.requestId,
+        },
+        tx,
+      );
+    });
+
+    res.status(200).json({ data: { id: caseId, disabled } });
+  },
+);
+
+/**
+ * GET /admin/cases/history
+ *
+ * Lists administratively disabled cases. Mirrors the active case queue but
+ * shows only cases with `disabled_at` set.
+ */
+adminRouter.get(
+  "/admin/cases/history",
+  requirePrincipal,
+  requirePermission("case:manage"),
+  validate({ query: caseFiltersSchema }),
+  async (req, res) => {
+    const { db } = getDatabase();
+    const filters = req.query as unknown as z.infer<typeof caseFiltersSchema>;
+
+    const conditions: SQL[] = [isNotNull(schema.bgvCases.disabledAt)];
+    if (filters.search) {
+      const term = `%${filters.search}%`;
+      conditions.push(
+        or(
+          eq(schema.candidateProfiles.candidateId, filters.search),
+          like(schema.candidateProfiles.fullName, term),
+          like(schema.bgvCases.caseNumber, term),
+        )!,
+      );
+    }
+    if (filters.status && filters.status.length > 0) {
+      conditions.push(inArray(schema.bgvCases.status, filters.status));
+    }
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const totalRows = await db
+      .select({ value: count() })
+      .from(schema.bgvCases)
+      .innerJoin(
+        schema.candidateProfiles,
+        eq(schema.candidateProfiles.id, schema.bgvCases.profileId),
+      )
+      .where(where);
+
+    const rows = await db
+      .select({
+        id: schema.bgvCases.id,
+        caseNumber: schema.bgvCases.caseNumber,
+        candidateId: schema.candidateProfiles.candidateId,
+        candidateName: schema.candidateProfiles.fullName,
+        company: schema.bgvCases.company,
+        department: schema.bgvCases.department,
+        position: schema.bgvCases.position,
+        status: schema.bgvCases.status,
+        disabledAt: schema.bgvCases.disabledAt,
+        assignedVerifierId: schema.bgvCases.assignedVerifierId,
+        assignedVerifierName: schema.users.fullName,
+        score: schema.bgvCases.score,
+        scoreOutcome: schema.bgvCases.scoreOutcome,
+        submittedAt: schema.bgvCases.submittedAt,
+        updatedAt: schema.bgvCases.updatedAt,
+        openClarificationCount: sql`COALESCE((
+          SELECT COUNT(*) FROM ${schema.clarificationRequests}
+          WHERE ${schema.clarificationRequests.caseId} = ${schema.bgvCases.id}
+            AND ${schema.clarificationRequests.status} IN ('OPEN', 'RESPONDED')
+        ), 0)`,
+      })
+      .from(schema.bgvCases)
+      .innerJoin(
+        schema.candidateProfiles,
+        eq(schema.candidateProfiles.id, schema.bgvCases.profileId),
+      )
+      .leftJoin(schema.users, eq(schema.users.id, schema.bgvCases.assignedVerifierId))
+      .where(where)
+      .orderBy(desc(schema.bgvCases.disabledAt))
+      .limit(filters.pageSize)
+      .offset((filters.page - 1) * filters.pageSize);
+
+    const total = totalRows[0]?.value ?? 0;
+    res.status(200).json({
+      data: rows.map((row) => ({
+        id: row.id,
+        caseNumber: row.caseNumber,
+        candidateId: row.candidateId,
+        candidateName: row.candidateName,
+        company: row.company,
+        department: row.department,
+        position: row.position,
+        status: row.status,
+        disabledAt: row.disabledAt?.toISOString() ?? null,
+        assignedVerifierId: row.assignedVerifierId,
+        assignedVerifierName: row.assignedVerifierName,
+        score: row.score === null ? null : Number(row.score),
+        scoreOutcome: row.scoreOutcome,
+        submittedAt: row.submittedAt?.toISOString() ?? null,
+        updatedAt: row.updatedAt.toISOString(),
+        openClarificationCount: Number(row.openClarificationCount),
+        disabled: true,
+      })),
+      meta: {
+        page: filters.page,
+        pageSize: filters.pageSize,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / filters.pageSize)),
+      },
+    });
   },
 );
 

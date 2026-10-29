@@ -24,6 +24,8 @@ export const caseSchema = z.object({
   score: z.number().nullable(),
   scoreOutcome: z.string().nullable(),
   eligibilityResult: z.string().nullable(),
+  disabledAt: z.string().nullable(),
+  disabled: z.boolean(),
   openClarificationCount: z.number().int().nonnegative(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -47,6 +49,8 @@ export const caseListItemSchema = caseSchema.pick({
   submittedAt: true,
   updatedAt: true,
   openClarificationCount: true,
+  disabledAt: true,
+  disabled: true,
 });
 export type CaseListItem = z.infer<typeof caseListItemSchema>;
 
