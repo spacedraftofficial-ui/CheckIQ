@@ -58,6 +58,25 @@ export const changePasswordRequestSchema = z.object({
 });
 export type ChangePasswordRequest = z.infer<typeof changePasswordRequestSchema>;
 
+/**
+ * Forgot password: the caller only needs to supply an email address. Whether
+ * or not an account exists for it, the response is the same (enumeration-safe).
+ */
+export const forgotPasswordRequestSchema = z.object({
+  email: z.email({ error: "Enter a valid email address" }).max(254),
+});
+export type ForgotPasswordRequest = z.infer<typeof forgotPasswordRequestSchema>;
+
+/**
+ * Reset password: a single-use 6-digit OTP plus the new password. The OTP is
+ * verified against a password_reset_tokens row that is then consumed.
+ */
+export const resetPasswordRequestSchema = z.object({
+  code: z.string().length(6, { error: "Enter the 6-digit reset code" }),
+  newPassword: passwordSchema,
+});
+export type ResetPasswordRequest = z.infer<typeof resetPasswordRequestSchema>;
+
 export const sessionUserSchema = z.object({
   id: z.string().uuid(),
   email: z.email(),

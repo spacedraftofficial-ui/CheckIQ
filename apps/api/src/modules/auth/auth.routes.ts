@@ -2,8 +2,10 @@ import { Router } from "express";
 import { z } from "zod";
 import {
   changePasswordRequestSchema,
+  forgotPasswordRequestSchema,
   loginRequestSchema,
   refreshRequestSchema,
+  resetPasswordRequestSchema,
   signupRequestSchema,
 } from "@checkiq/contracts";
 import { validate } from "../../middleware/validate.js";
@@ -13,6 +15,11 @@ import { changePassword, login, logout, refresh, signup } from "./auth.service.j
 import { REFRESH_COOKIE_NAME } from "./auth.service.js";
 import { clearRefreshCookie, setRefreshCookie } from "./auth.cookie.js";
 import { buildSessionUser } from "./auth.service.js";
+import {
+  sendPasswordResetOtp,
+  resetPassword,
+  verifyPasswordResetOtp,
+} from "./password-reset.service.js";
 import { verifyEmailOtp, resendVerificationEmail } from "./email-verification.service.js";
 
 export const authRouter = Router();
@@ -155,5 +162,41 @@ authRouter.post(
       requestContext(req),
     );
     res.status(200).json({ data: { changed: true } });
+  },
+);
+
+/**
+ * POST /api/auth/forgot-password
+ *
+ * Sends a 6-digit password reset code to the account owning the email address.
+ * Enumeration-safe: the same response is returned whether or not an account
+ * exists for the supplied email.
+ */
+const forgotPasswordSchema = forgotPasswordRequestSchema;
+
+authRouter.post(
+  "/forgot-password",
+  authRateLimit,
+  validate({ body: forgotPasswordSchema }),
+  async (req, res) => {
+    const result = await sendPasswordResetOtp(req.body.email);
+    res.status(200).json({ data: result });
+  },
+);
+
+/**
+ * POST /api/auth/reset-password
+ *
+ * Verifies a single-use 6-digit reset code and sets a new password. The code
+ * is consumed on success and all of the user's sessions are invalidated.
+ */
+authRouter.post(
+  "/reset-password",
+  authRateLimit,
+  validate({ body: resetPasswordRequestSchema }),
+  async (req, res) => {
+    const { userId } = await verifyPasswordResetOtp(req.body.code);
+    await resetPassword(userId, req.body.newPassword, requestContext(req));
+    res.status(200).json({ data: { reset: true } });
   },
 );

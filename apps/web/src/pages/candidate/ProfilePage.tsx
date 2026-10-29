@@ -250,6 +250,7 @@ export function ProfilePage() {
                 <option value="PERMANENT">Permanent</option>
                 <option value="OTHER">Other</option>
               </select>
+              <InlineError message={errors.addresses?.[index]?.type?.message} />
             </div>
             <div className="sm:col-span-2">
               <label className={labelCls} htmlFor={"address-line1-" + index}>
@@ -260,6 +261,7 @@ export function ProfilePage() {
                 className={inputCls}
                 {...register(`addresses.${index}.line1` as const)}
               />
+              <InlineError message={errors.addresses?.[index]?.line1?.message} />
             </div>
             <div className="sm:col-span-2">
               <label className={labelCls} htmlFor={"address-line2-" + index}>
@@ -270,6 +272,7 @@ export function ProfilePage() {
                 className={inputCls}
                 {...register(`addresses.${index}.line2` as const)}
               />
+              <InlineError message={errors.addresses?.[index]?.line2?.message} />
             </div>
             <div>
               <label className={labelCls} htmlFor={"address-city-" + index}>
@@ -280,6 +283,7 @@ export function ProfilePage() {
                 className={inputCls}
                 {...register(`addresses.${index}.city` as const)}
               />
+              <InlineError message={errors.addresses?.[index]?.city?.message} />
             </div>
             <div>
               <label className={labelCls} htmlFor={"address-state-" + index}>
@@ -290,6 +294,7 @@ export function ProfilePage() {
                 className={inputCls}
                 {...register(`addresses.${index}.state` as const)}
               />
+              <InlineError message={errors.addresses?.[index]?.state?.message} />
             </div>
             <div>
               <label className={labelCls} htmlFor={"address-country-" + index}>
@@ -300,6 +305,7 @@ export function ProfilePage() {
                 className={inputCls}
                 {...register(`addresses.${index}.country` as const)}
               />
+              <InlineError message={errors.addresses?.[index]?.country?.message} />
             </div>
             <div>
               <label className={labelCls} htmlFor={"address-postal-" + index}>
@@ -310,6 +316,7 @@ export function ProfilePage() {
                 className={inputCls}
                 {...register(`addresses.${index}.postalCode` as const)}
               />
+              <InlineError message={errors.addresses?.[index]?.postalCode?.message} />
             </div>
           </div>
         )}
@@ -342,6 +349,7 @@ export function ProfilePage() {
                 className={inputCls}
                 {...register(`education.${index}.qualification` as const)}
               />
+              <InlineError message={errors.education?.[index]?.qualification?.message} />
             </div>
             <div>
               <label className={labelCls} htmlFor={"edu-institution-" + index}>
@@ -352,6 +360,7 @@ export function ProfilePage() {
                 className={inputCls}
                 {...register(`education.${index}.institution` as const)}
               />
+              <InlineError message={errors.education?.[index]?.institution?.message} />
             </div>
             <div>
               <label className={labelCls} htmlFor={"edu-board-" + index}>
@@ -362,6 +371,7 @@ export function ProfilePage() {
                 className={inputCls}
                 {...register(`education.${index}.universityOrBoard` as const)}
               />
+              <InlineError message={errors.education?.[index]?.universityOrBoard?.message} />
             </div>
             <div>
               <label className={labelCls} htmlFor={"edu-registration-" + index}>
@@ -372,6 +382,7 @@ export function ProfilePage() {
                 className={inputCls}
                 {...register(`education.${index}.registrationNumber` as const)}
               />
+              <InlineError message={errors.education?.[index]?.registrationNumber?.message} />
             </div>
             <div>
               <label className={labelCls} htmlFor={"edu-year-" + index}>
@@ -383,6 +394,7 @@ export function ProfilePage() {
                 className={inputCls}
                 {...register(`education.${index}.yearOfPassing` as const, { valueAsNumber: true })}
               />
+              <InlineError message={errors.education?.[index]?.yearOfPassing?.message} />
             </div>
             <div>
               <label className={labelCls} htmlFor={"edu-score-" + index}>
@@ -393,6 +405,7 @@ export function ProfilePage() {
                 className={inputCls}
                 {...register(`education.${index}.scoreOrPercentage` as const)}
               />
+              <InlineError message={errors.education?.[index]?.scoreOrPercentage?.message} />
             </div>
           </div>
         )}
@@ -424,6 +437,7 @@ export function ProfilePage() {
                 className={inputCls}
                 {...register(`employments.${index}.employer` as const)}
               />
+              <InlineError message={errors.employments?.[index]?.employer?.message} />
             </div>
             <div>
               <label className={labelCls} htmlFor={"emp-designation-" + index}>
@@ -434,6 +448,7 @@ export function ProfilePage() {
                 className={inputCls}
                 {...register(`employments.${index}.designation` as const)}
               />
+              <InlineError message={errors.employments?.[index]?.designation?.message} />
             </div>
             <div>
               <label className={labelCls} htmlFor={"emp-id-" + index}>
@@ -444,6 +459,7 @@ export function ProfilePage() {
                 className={inputCls}
                 {...register(`employments.${index}.employeeId` as const)}
               />
+              <InlineError message={errors.employments?.[index]?.employeeId?.message} />
             </div>
             <div>
               <label className={labelCls} htmlFor={"emp-from-" + index}>
@@ -455,6 +471,7 @@ export function ProfilePage() {
                 className={inputCls}
                 {...register(`employments.${index}.fromDate` as const)}
               />
+              <InlineError message={errors.employments?.[index]?.fromDate?.message} />
             </div>
             <div>
               <label className={labelCls} htmlFor={"emp-to-" + index}>
@@ -466,6 +483,7 @@ export function ProfilePage() {
                 className={inputCls}
                 {...register(`employments.${index}.toDate` as const)}
               />
+              <InlineError message={errors.employments?.[index]?.toDate?.message} />
             </div>
             <div className="flex items-end">
               <label className="flex w-full cursor-pointer items-center gap-3 rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm font-medium text-slate-800 ring-1 ring-inset ring-slate-200 transition hover:bg-white hover:ring-slate-300 has-[:checked]:bg-blue-50 has-[:checked]:ring-blue-400">
@@ -476,6 +494,7 @@ export function ProfilePage() {
                 />
                 I currently work here
               </label>
+              <InlineError message={errors.employments?.[index]?.isCurrent?.message} />
             </div>
             <div>
               <label className={labelCls} htmlFor={"emp-contact-name-" + index}>
@@ -486,6 +505,7 @@ export function ProfilePage() {
                 className={inputCls}
                 {...register(`employments.${index}.contactName` as const)}
               />
+              <InlineError message={errors.employments?.[index]?.contactName?.message} />
             </div>
             <div>
               <label className={labelCls} htmlFor={"emp-contact-email-" + index}>
@@ -497,6 +517,18 @@ export function ProfilePage() {
                 className={inputCls}
                 {...register(`employments.${index}.contactEmail` as const)}
               />
+              <InlineError message={errors.employments?.[index]?.contactEmail?.message} />
+            </div>
+            <div>
+              <label className={labelCls} htmlFor={"emp-contact-mobile-" + index}>
+                Contact mobile
+              </label>
+              <input
+                id={"emp-contact-mobile-" + index}
+                className={inputCls}
+                {...register(`employments.${index}.contactMobile` as const)}
+              />
+              <InlineError message={errors.employments?.[index]?.contactMobile?.message} />
             </div>
           </div>
         )}

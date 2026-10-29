@@ -166,17 +166,26 @@ export function LoginPage() {
                 >
                   {submitting ? "Signing in…" : "Sign in"}
                 </button>
-              </form>
+                </form>
 
-              <p className="mt-8 rounded-2xl bg-blue-50 px-4 py-3 text-center text-sm text-slate-600 ring-1 ring-inset ring-blue-100">
-                Need to start a new verification?{" "}
-                <Link
-                  to="/"
-                  className="font-semibold text-blue-700 underline decoration-blue-300 underline-offset-2 transition hover:text-violet-700"
-                >
-                  Enter your Candidate ID
-                </Link>
-              </p>
+                <p className="mt-4 text-right">
+                  <Link
+                    to="/forgot-password"
+                    className="text-sm font-semibold text-blue-700 underline decoration-blue-300 underline-offset-2 transition hover:text-violet-700"
+                  >
+                    Forgot your password?
+                  </Link>
+                </p>
+
+                <p className="mt-8 rounded-2xl bg-blue-50 px-4 py-3 text-center text-sm text-slate-600 ring-1 ring-inset ring-blue-100">
+                  Need to start a new verification?{" "}
+                  <Link
+                    to="/"
+                    className="font-semibold text-blue-700 underline decoration-blue-300 underline-offset-2 transition hover:text-violet-700"
+                  >
+                    Enter your Candidate ID
+                  </Link>
+                </p>
             </div>
           </div>
         </div>

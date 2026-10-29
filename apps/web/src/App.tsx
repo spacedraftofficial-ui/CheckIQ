@@ -6,6 +6,8 @@ import { LoadingBlock } from "./components/States";
 import { LandingPage } from "./pages/LandingPage";
 import { SignupPage } from "./pages/SignupPage";
 import { LoginPage } from "./pages/LoginPage";
+import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { CandidateDashboard } from "./pages/candidate/CandidateDashboard";
 import { ProfilePage } from "./pages/candidate/ProfilePage";
 import { DocumentsPage } from "./pages/candidate/DocumentsPage";
@@ -88,6 +90,22 @@ export function App() {
         element={
           <RequireAnonymous>
             <LoginPage />
+          </RequireAnonymous>
+        }
+      />
+      <Route
+        path="/forgot-password"
+        element={
+          <RequireAnonymous>
+            <ForgotPasswordPage />
+          </RequireAnonymous>
+        }
+      />
+      <Route
+        path="/reset-password"
+        element={
+          <RequireAnonymous>
+            <ResetPasswordPage />
           </RequireAnonymous>
         }
       />

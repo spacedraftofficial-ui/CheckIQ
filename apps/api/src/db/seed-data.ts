@@ -242,7 +242,7 @@ export const SCORING_EXCLUDED_STATUSES = ["WAIVED", "NOT_APPLICABLE"];
  */
 export const CONSENT_SEED = {
   version: "2026.1-draft",
-  title: "Declaration and consent for background verification (DRAFT PLACEHOLDER)",
+  title: "Declaration and consent for background verification",
   body: [
   
       

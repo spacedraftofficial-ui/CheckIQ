@@ -162,3 +162,12 @@ export async function apiBlob(path: string): Promise<Blob> {
   }
   return await response.blob();
 }
+
+/** Public (no access token) password reset flow. */
+export async function forgotPassword(email: string): Promise<{ sent: boolean; message: string }> {
+  return request("/auth/forgot-password", { body: { email }, auth: false });
+}
+
+export async function resetPassword(code: string, newPassword: string): Promise<{ reset: boolean }> {
+  return request("/auth/reset-password", { body: { code, newPassword }, auth: false });
+}

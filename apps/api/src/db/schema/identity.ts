@@ -142,3 +142,23 @@ export const emailVerificationTokens = mysqlTable(
     index("ix_email_verification_tokens_user").on(t.userId),
   ],
 );
+
+/** Single-use, short-lived OTP tokens for candidate password reset. */
+export const passwordResetTokens = mysqlTable(
+  "password_reset_tokens",
+  {
+    id: varchar("id", { length: 36 }).primaryKey(),
+    userId: varchar("user_id", { length: 36 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: varchar("token_hash", { length: 64 }).notNull(),
+    expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
+    usedAt: timestamp("used_at", { mode: "date", fsp: 3 }),
+    createdAt: timestamp("created_at", { mode: "date", fsp: 3 }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("uq_password_reset_tokens_hash").on(t.tokenHash),
+    index("ix_password_reset_tokens_user").on(t.userId),
+    index("ix_password_reset_tokens_expires").on(t.expiresAt),
+  ],
+);

@@ -46,12 +46,12 @@ export function LandingPage() {
                 Candidate verification portal
               </span>
 
-              <h1 className="mt-5 text-4xl font-extrabold leading-[1.1] tracking-tight text-slate-900 sm:text-5xl">
-                Complete your
-                <span className="block bg-gradient-to-r from-blue-600 to-violet-500 bg-clip-text text-transparent">
-                  background verification.
-                </span>
-              </h1>
+  <h1 className="mt-5 text-4xl font-extrabold leading-[1.1] tracking-tight text-slate-900 sm:text-5xl">
+    Complete your{" "}
+    <span className="block bg-gradient-to-r from-blue-600 to-violet-500 bg-clip-text text-transparent">
+      background verification.
+    </span>
+  </h1>
               <p className="mt-5 max-w-xl text-base leading-relaxed text-slate-600">
                 Enter the Candidate ID issued to you, create your account and upload the
                 documents required for verification. You will be able to track exactly what is
