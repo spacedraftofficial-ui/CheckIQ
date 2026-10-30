@@ -136,17 +136,17 @@ export function OpsDashboard() {
           </div>
         ) : (
           queueGroups.map((group) => (
-            <button
-              key={group.key}
-              type="button"
-              onClick={() => {
-                setStatus(group.key);
-                setPage(1);
-              }}
-              className={`card p-4 text-left transition-colors hover:border-brand-300 ${
-                status === group.key ? "border-brand-400 ring-1 ring-brand-200" : ""
-              }`}
-            >
+              <button
+                key={group.key}
+                type="button"
+                onClick={() => {
+                  setStatus(group.key);
+                  setPage(1);
+                }}
+                className={`card-interactive p-4 text-left transition-colors hover:border-brand-300 ${
+                  status === group.key ? "border-brand-400 ring-1 ring-brand-200" : ""
+                }`}
+              >
               <p className="text-xs font-medium uppercase tracking-wide text-ink-500">
                 {group.label}
               </p>
