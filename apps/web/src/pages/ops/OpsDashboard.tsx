@@ -291,11 +291,11 @@ export function OpsDashboard() {
                     </td>
                     <td className="px-4 py-3 text-ink-700">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{item.documentCompletion}%</span>
+                        <span className="text-sm font-medium">{Math.round(item.documentCompletion)}%</span>
                         <div className="w-12 h-2 bg-ink-200 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-brand-600 rounded-full transition-all"
-                            style={{ width: `${item.documentCompletion}%` }}
+                            className="h-full rounded-full bg-brand-600 transition-all"
+                            style={{ width: `${Math.round(item.documentCompletion)}%` }}
                           />
                         </div>
                       </div>

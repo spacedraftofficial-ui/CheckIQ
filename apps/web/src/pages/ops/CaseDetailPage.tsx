@@ -263,12 +263,12 @@ export function CaseDetailPage() {
             <div className="h-2 flex-1 overflow-hidden rounded-full bg-ink-200">
               <div
                 className="h-full rounded-full bg-emerald-600 transition-all"
-                style={{ width: `${data.documentCompletion.percentage}%` }}
+                style={{ width: `${Math.round(data.documentCompletion.percentage)}%` }}
               />
             </div>
-            <span className="text-sm font-medium text-ink-900">
-              {data.documentCompletion.completed}/{data.documentCompletion.total} ({data.documentCompletion.percentage}%)
-            </span>
+              <span className="text-sm font-medium text-ink-900">
+                {data.documentCompletion.completed}/{data.documentCompletion.total} ({Math.round(data.documentCompletion.percentage)}%)
+              </span>
           </div>
         </div>
       </section>
