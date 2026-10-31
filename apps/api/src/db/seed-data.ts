@@ -41,7 +41,6 @@ export const DOCUMENT_TYPE_SEED = [
   { categoryCode: "SALARY", code: "SALARY_SLIP", name: "Salary slip", displayOrder: 1 },
   { categoryCode: "SALARY", code: "SALARY_ACCOUNT_PROOF", name: "Salary account proof", displayOrder: 2 },
   { categoryCode: "TAX", code: "FORM_16", name: "Form 16", displayOrder: 1 },
-  { categoryCode: "DOCUMENT_AUTHENTICITY", code: "DECLARED_DOCUMENT", name: "Self-declared document copy", displayOrder: 1 },
   {
     categoryCode: "DOCUMENT_AUTHENTICITY",
     code: "ORGANISATION_LETTER",

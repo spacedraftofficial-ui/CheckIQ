@@ -386,6 +386,14 @@ casesRouter.get(
     const { caseRow, profile } = await resolveCase(req.principal!, param(req, "caseId"));
     const { db } = getDatabase();
 
+    const profileValues = await db
+      .select({
+        fieldKey: schema.candidateProfileValues.fieldKey,
+        valueText: schema.candidateProfileValues.valueText,
+      })
+      .from(schema.candidateProfileValues)
+      .where(eq(schema.candidateProfileValues.profileId, profile.id));
+
     const [verifier, reviewer, pkg] = await Promise.all([
       caseRow.assignedVerifierId
         ? db
@@ -461,6 +469,10 @@ casesRouter.get(
             ? Math.round(((totalDocuments - readiness.missing.documents.length) / totalDocuments) * 100)
             : 0,
         },
+        profileValues: profileValues.map((row) => ({
+          fieldKey: row.fieldKey,
+          valueText: row.valueText,
+        })),
         submissionReady: readiness.ready,
         createdAt: caseRow.createdAt.toISOString(),
         updatedAt: caseRow.updatedAt.toISOString(),
