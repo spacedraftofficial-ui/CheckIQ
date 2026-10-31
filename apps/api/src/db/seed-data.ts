@@ -38,7 +38,6 @@ export const DOCUMENT_TYPE_SEED = [
   { categoryCode: "EMPLOYMENT", code: "EXPERIENCE_LETTER", name: "Experience letter", displayOrder: 3 },
   { categoryCode: "EMPLOYMENT", code: "RELIEVING_LETTER", name: "Relieving letter", displayOrder: 4 },
   { categoryCode: "EMPLOYMENT", code: "EMPLOYMENT_ID", name: "Employment ID card", displayOrder: 5 },
-  { categoryCode: "EMPLOYMENT", code: "CONTACT_REFERENCE", name: "Contact numbers / reference details", displayOrder: 6 },
   { categoryCode: "SALARY", code: "SALARY_SLIP", name: "Salary slip", displayOrder: 1 },
   { categoryCode: "SALARY", code: "SALARY_ACCOUNT_PROOF", name: "Salary account proof", displayOrder: 2 },
   { categoryCode: "TAX", code: "FORM_16", name: "Form 16", displayOrder: 1 },
@@ -174,6 +173,7 @@ export const PROFILE_FIELD_SEED = [
   { fieldKey: "drivingLicenceNumber", label: "Driving licence number", section: "IDENTITY", dataType: "TEXT", required: false, displayOrder: 10 },
   { fieldKey: "education", label: "Education qualification", section: "EDUCATION", dataType: "TEXTAREA", required: true, displayOrder: 11 },
   { fieldKey: "employment", label: "Employment history", section: "EMPLOYMENT", dataType: "TEXTAREA", required: true, displayOrder: 12 },
+  { fieldKey: "contactNumbers", label: "Contact numbers / references", section: "CONTACT", dataType: "TEXTAREA", required: true, displayOrder: 13 },
 ] as const;
 
 export const STANDARD_PACKAGE_SEED = {
@@ -190,6 +190,7 @@ export const STANDARD_PACKAGE_SEED = {
     "currentAddress",
     "education",
     "employment",
+    "contactNumbers",
   ],
   requirements: [
     { categoryCode: "IDENTITY", documentTypeCode: "PAN_CARD", label: "PAN Card", isMandatory: true, displayOrder: 1 },
@@ -203,7 +204,6 @@ export const STANDARD_PACKAGE_SEED = {
     { categoryCode: "SALARY", documentTypeCode: "SALARY_SLIP", label: "Last 3 Months Payslips", isMandatory: true, displayOrder: 9 },
     { categoryCode: "SALARY", documentTypeCode: "SALARY_ACCOUNT_PROOF", label: "Bank Statement for Last 6 Months (Reflecting Salary)", isMandatory: false, displayOrder: 10 },
     { categoryCode: "OTHER", documentTypeCode: "SUPPORTING_DOCUMENT", label: "Updated Resume", isMandatory: false, displayOrder: 11 },
-    { categoryCode: "EMPLOYMENT", documentTypeCode: "CONTACT_REFERENCE", label: "Two Contact Numbers from Previous Company / College HODs / Professors", isMandatory: true, displayOrder: 12 },
   ],
   checks: [
     { code: "IDENTITY", isMandatory: true, weight: 20 },

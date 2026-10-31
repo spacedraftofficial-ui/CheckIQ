@@ -1,4 +1,4 @@
-﻿import { useEffect } from "react";
+﻿import { useEffect, useState } from "react";
 import { useFieldArray, useForm, type Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -41,6 +41,7 @@ interface ProfileResponse {
 
 export function ProfilePage() {
   const queryClient = useQueryClient();
+  const [contactNumbers, setContactNumbers] = useState("");
   const query = useQuery({
     queryKey: ["candidate", "profile"],
     queryFn: () => request<ProfileResponse>("/profile"),
@@ -129,7 +130,12 @@ export function ProfilePage() {
   return (
     <form
       className="space-y-6 sm:space-y-8"
-      onSubmit={handleSubmit((values) => save.mutate(values))}
+      onSubmit={handleSubmit((values) => {
+        const customFields = contactNumbers
+          ? [{ fieldKey: "contactNumbers", value: contactNumbers }]
+          : [];
+        void save.mutate({ ...values, customFields });
+      })}
       noValidate
     >
       {/* Page header */}
@@ -225,6 +231,21 @@ export function ProfilePage() {
                 Driving licence number <span className={optionalCls}>(optional)</span>
               </label>
               <input id="drivingLicenceNumber" className={inputCls} {...register("drivingLicenceNumber")} />
+            </div>
+            <div className="sm:col-span-2">
+              <label className={labelCls} htmlFor="contactNumbers">
+                Contact numbers / references
+              </label>
+              <textarea
+                id="contactNumbers"
+                className={`${inputCls} min-h-[80px]`}
+                placeholder="Two contact numbers from previous company / college HODs / professors"
+                value={contactNumbers}
+                onChange={(e) => setContactNumbers(e.target.value)}
+              />
+              <p className="mt-0.5 text-xs text-slate-500">
+                Provide two contact numbers (previous employer, college HOD, or professor) for reference checks.
+              </p>
             </div>
           </div>
         </div>

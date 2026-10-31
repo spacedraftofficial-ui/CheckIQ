@@ -4,7 +4,6 @@ import { mkdir, rename, rm } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { getConfig } from "../config.js";
 import { uploadRejected } from "./errors.js";
-import { getLogger } from "./logger.js";
 
 /**
  * Private document storage.
@@ -32,8 +31,6 @@ export interface StoredObject {
   mimeType: string;
 }
 
-const logger = getLogger();
-
 /**
  * Resolves the storage root directory.
  *
@@ -53,39 +50,21 @@ const logger = getLogger();
  */
 export function storageRoot(): string {
   const configured = getConfig().STORAGE_DIR;
-  const resolved = resolve(process.cwd(), configured);
 
-  if (process.env.HOSTINGER_SOURCE_DIR && !isAbsolute(configured)) {
-    let persistentRoot: string | undefined;
-
-    if (process.env.HOSTINGER_SOURCE_DIR) {
-      // Navigate up from the Hostinger source dir to the account home.
-      // /home/u/username/domains/domain.com/public_html  ->  /home/u/username
-      const parts = process.env.HOSTINGER_SOURCE_DIR.split("/");
-      // Find the /home segment and take everything up to and including the username
-      const homeIdx = parts.findIndex((p) => p === "home");
-      if (homeIdx >= 0 && homeIdx + 2 <= parts.length) {
-        persistentRoot = "/" + parts.slice(0, homeIdx + 2).join("/");
-      }
-    }
-
-    // Fallback: use HOME if the derivation above failed
-    if (!persistentRoot && process.env.HOME) {
-      persistentRoot = process.env.HOME;
-    }
-
-    if (persistentRoot) {
-      const finalRoot = join(persistentRoot, "checkiq-storage");
-      if (finalRoot !== resolved) {
-        logger.info(
-          { configured, persistent: finalRoot },
-          "Relocating document storage to persistent path (relative STORAGE_DIR on Hostinger)",
-        );
-        return finalRoot;
-      }
-    }
+  // Absolute paths are used as-is.
+  if (isAbsolute(configured)) {
+    return configured;
   }
-  return resolved;
+
+  // Relative paths are stored outside the project directory so uploaded
+  // files survive redeploys (the project directory may be wiped on redeploy).
+  const persistentRoot = process.env.HOME || process.env.USERPROFILE;
+  if (persistentRoot) {
+    return join(persistentRoot, ".checkiq", "storage");
+  }
+
+  // Last resort: project-relative (may be wiped on redeploy).
+  return resolve(process.cwd(), configured);
 }
 
 function tempRoot(): string {
