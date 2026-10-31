@@ -175,6 +175,22 @@ adminRouter.get(
 
     if (!user) throw notFound("User not found");
 
+    const [profile] = await db
+      .select({ id: schema.candidateProfiles.id })
+      .from(schema.candidateProfiles)
+      .where(eq(schema.candidateProfiles.userId, user.id))
+      .limit(1);
+
+    const profileValues = profile
+      ? await db
+          .select({
+            fieldKey: schema.candidateProfileValues.fieldKey,
+            valueText: schema.candidateProfileValues.valueText,
+          })
+          .from(schema.candidateProfileValues)
+          .where(eq(schema.candidateProfileValues.profileId, profile.id))
+      : [];
+
     const activeRoles = await db
       .select({ code: schema.userRoles.roleCode, assignedAt: schema.userRoles.assignedAt })
       .from(schema.userRoles)
@@ -246,6 +262,10 @@ adminRouter.get(
         revokedRoles: revokedRoles.map((row) => ({
           code: row.code as (typeof USER_ROLES)[number],
           revokedAt: row.revokedAt!.toISOString(),
+        })),
+        profileValues: profileValues.map((row) => ({
+          fieldKey: row.fieldKey,
+          valueText: row.valueText,
         })),
         associatedCases: associatedCases.map((row) => ({
           id: row.id,

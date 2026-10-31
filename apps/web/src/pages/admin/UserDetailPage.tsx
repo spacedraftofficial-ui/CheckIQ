@@ -45,6 +45,7 @@ interface UserDetail {
     requestId: string | null;
     createdAt: string;
   }[];
+  profileValues: { fieldKey: string; valueText: string | null }[];
 }
 
 const roleLabels: Record<string, string> = {
@@ -302,12 +303,38 @@ export function UserDetailPage() {
             <div className="mt-2 flex flex-wrap gap-2">
               {data.revokedRoles.map((r) => (
                 <span key={r.code} className="text-xs text-ink-500">
-                  {roleLabels[r.code] ?? r.code} · revoked {new Date(r.revokedAt).toLocaleDateString()}
+                  {roleLabels[r.code] ?? r.code} (revoked {new Date(r.revokedAt).toLocaleDateString()})
                 </span>
               ))}
             </div>
           </div>
         ) : null}
+      </section>
+
+      <section className="card p-5 sm:p-6">
+        <h2 className="text-base font-semibold text-ink-900">Profile details</h2>
+        {data.profileValues.length === 0 ? (
+          <p className="mt-2 text-sm text-ink-500">No profile fields recorded.</p>
+        ) : (
+          <table className="w-full text-left text-sm mt-3 divide-y divide-ink-200">
+            <thead className="border-b border-ink-200 bg-ink-50 text-xs uppercase tracking-wide text-ink-500">
+              <tr>
+                <th scope="col" className="px-3 py-2">Field</th>
+                <th scope="col" className="px-3 py-2">Value</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-ink-200">
+              {data.profileValues.map((field) => (
+                <tr key={field.fieldKey}>
+                  <td className="px-3 py-2 font-medium text-ink-900">
+                    {field.fieldKey.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())}
+                  </td>
+                  <td className="px-3 py-2 text-sm text-ink-700 break-words">{field.valueText}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </section>
 
       <section className="card p-5 sm:p-6">
