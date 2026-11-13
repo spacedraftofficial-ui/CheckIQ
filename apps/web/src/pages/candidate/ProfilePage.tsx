@@ -36,16 +36,21 @@ interface ProfileResponse {
   addresses: { id?: string; type: string; line1: string; line2?: string | null; city: string; state: string; country: string; postalCode?: string | null }[];
   education: { id?: string; qualification: string; institution: string; universityOrBoard?: string | null; registrationNumber?: string | null; yearOfPassing: number; scoreOrPercentage?: string | null }[];
   employments: { id?: string; employer: string; designation: string; employeeId?: string | null; fromDate: string; toDate?: string | null; isCurrent: boolean; contactName?: string | null; contactEmail?: string | null; contactMobile?: string | null }[];
+  customFields?: { fieldKey: string; value: string | null }[];
   profileCompleted: boolean;
 }
 
 export function ProfilePage() {
   const queryClient = useQueryClient();
-  const [contactNumbers, setContactNumbers] = useState("");
+  // null = untouched, so the saved value is shown until the candidate edits it.
+  const [contactNumbersDraft, setContactNumbers] = useState<string | null>(null);
   const query = useQuery({
     queryKey: ["candidate", "profile"],
     queryFn: () => request<ProfileResponse>("/profile"),
   });
+  const savedContactNumbers =
+    query.data?.customFields?.find((field) => field.fieldKey === "contactNumbers")?.value ?? "";
+  const contactNumbers = contactNumbersDraft ?? savedContactNumbers;
 
   const {
     register,
@@ -131,9 +136,8 @@ export function ProfilePage() {
     <form
       className="space-y-6 sm:space-y-8"
       onSubmit={handleSubmit((values) => {
-        const customFields = contactNumbers
-          ? [{ fieldKey: "contactNumbers", value: contactNumbers }]
-          : [];
+        // Always sent, so clearing the box really clears the saved value.
+        const customFields = [{ fieldKey: "contactNumbers", value: contactNumbers.trim() }];
         void save.mutate({ ...values, customFields });
       })}
       noValidate

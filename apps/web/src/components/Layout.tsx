@@ -15,8 +15,10 @@ const candidateLinks = [
   { to: "/submit", label: "Submit", icon: FileCheck2 },
 ];
 
-const staffLinks = [
-  { to: "/ops", label: "Cases", icon: LayoutDashboard },
+const staffLinks = [{ to: "/ops", label: "Cases", icon: LayoutDashboard }];
+
+/** Only administrators can open these routes, so only they see the links. */
+const adminLinks = [
   { to: "/admin/users", label: "Users", icon: Users },
   { to: "/admin/packages", label: "Packages", icon: FileCheck2 },
   { to: "/admin/config", label: "Configuration", icon: Settings },
@@ -71,17 +73,23 @@ export function Layout() {
   });
 
   const isStaff = Boolean(user?.roles.some((role) => role !== "CANDIDATE"));
-  const links = isStaff ? staffLinks : candidateLinks;
+  const isAdmin = Boolean(
+    user?.roles.some((role) => role === "ADMINISTRATOR" || role === "SUPER_ADMINISTRATOR"),
+  );
+  const links = isStaff ? (isAdmin ? [...staffLinks, ...adminLinks] : staffLinks) : candidateLinks;
 
   const handleSignOut = async () => {
     await logout();
     navigate("/login", { replace: true });
   };
 
-  /* mobile drawer: close on route change and on Escape */
-  useEffect(() => {
+  /* mobile drawer: close on route change (adjusting state during render, as
+     React recommends, instead of a setState-in-effect) and on Escape */
+  const [menuPath, setMenuPath] = useState(location.pathname);
+  if (menuPath !== location.pathname) {
+    setMenuPath(location.pathname);
     setMenuOpen(false);
-  }, [location.pathname]);
+  }
 
   useEffect(() => {
     if (!menuOpen) return;

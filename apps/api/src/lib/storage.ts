@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { mkdir, rename, rm } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { getConfig } from "../config.js";
 import { uploadRejected } from "./errors.js";
 
@@ -32,39 +33,99 @@ export interface StoredObject {
 }
 
 /**
+ * Repository root, derived from this module's location.
+ * Source: apps/api/src/lib/storage.ts — compiled: apps/api/dist/lib/storage.js.
+ * Either way the repository root is four levels up.
+ */
+const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+
+function isInside(parent: string, child: string): boolean {
+  const rel = relative(resolve(parent), resolve(child));
+  return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
+}
+
+/**
+ * The hosting account's home directory, used as a persistent location that a
+ * git redeploy does not replace.
+ *
+ * Hostinger does not always set HOME for the Node.js process, so the account
+ * home is also derived from HOSTINGER_SOURCE_DIR:
+ *   /home/u123456789/domains/example.com/public_html  ->  /home/u123456789
+ */
+function persistentHome(): string | undefined {
+  // HOME first: files uploaded by earlier releases live under $HOME/.checkiq.
+  const home = process.env.HOME || process.env.USERPROFILE;
+  if (home) return home;
+  const sourceDir = process.env.HOSTINGER_SOURCE_DIR;
+  if (sourceDir) {
+    const parts = sourceDir.split("/").filter(Boolean);
+    const homeIdx = parts.indexOf("home");
+    if (homeIdx >= 0 && parts[homeIdx + 1]) {
+      return "/" + parts.slice(0, homeIdx + 2).join("/");
+    }
+  }
+  return undefined;
+}
+
+let resolvedRoot: string | undefined;
+
+/**
  * Resolves the storage root directory.
  *
- * On Hostinger (or any platform that wipes the project directory on redeploy),
- * a relative STORAGE_DIR like `./storage` is lost on every deploy. When we
- * detect the Hostinger deploy marker and a relative STORAGE_DIR, we
- * transparently relocate storage to a persistent path outside the project
- * directory so uploaded files survive redeployments without any manual
- * environment configuration.
+ * Uploaded files are NOT in git, and Hostinger replaces the project directory
+ * on every git deploy, so in production the storage root must live outside the
+ * project directory or every upload is lost on the next push.
  *
- * The persistent path is derived from HOSTINGER_SOURCE_DIR (always set by
- * Hostinger) by navigating up to the account home directory:
- *   HOSTINGER_SOURCE_DIR = /home/u/username/domains/domain.com/public_html
- *   persistentRoot        = /home/u/username/checkiq-storage
+ * - An absolute STORAGE_DIR is always used as-is (recommended in production).
+ * - In development and test, a relative STORAGE_DIR resolves against the
+ *   working directory, as you would expect locally.
+ * - In production (or on Hostinger), a relative STORAGE_DIR is relocated to
+ *   `<account home>/.checkiq/storage`.
  *
- * Falls back to $HOME when available.
+ * In production the server refuses to use a storage root inside the project
+ * directory — see `assertStorageIsPersistent`.
  */
 export function storageRoot(): string {
-  const configured = getConfig().STORAGE_DIR;
+  if (resolvedRoot) return resolvedRoot;
+  const config = getConfig();
+  const configured = config.STORAGE_DIR;
 
-  // Absolute paths are used as-is.
   if (isAbsolute(configured)) {
-    return configured;
+    resolvedRoot = configured;
+  } else if (config.NODE_ENV === "production" || process.env.HOSTINGER_SOURCE_DIR) {
+    const home = persistentHome();
+    resolvedRoot = home
+      ? join(home, ".checkiq", "storage")
+      : resolve(process.cwd(), configured);
+  } else {
+    resolvedRoot = resolve(process.cwd(), configured);
   }
+  return resolvedRoot;
+}
 
-  // Relative paths are stored outside the project directory so uploaded
-  // files survive redeploys (the project directory may be wiped on redeploy).
-  const persistentRoot = process.env.HOME || process.env.USERPROFILE;
-  if (persistentRoot) {
-    return join(persistentRoot, ".checkiq", "storage");
+/** Directories a redeploy replaces. Storage must not live in any of them. */
+function redeployedDirectories(): string[] {
+  const dirs = [PROJECT_ROOT, process.cwd()];
+  if (process.env.HOSTINGER_SOURCE_DIR) dirs.push(process.env.HOSTINGER_SOURCE_DIR);
+  return dirs;
+}
+
+/**
+ * Fails fast in production when uploaded files would be written somewhere a
+ * redeploy wipes. Losing documents silently is worse than a failed start with
+ * a clear message.
+ */
+export function assertStorageIsPersistent(): void {
+  if (getConfig().NODE_ENV !== "production") return;
+  const root = storageRoot();
+  const offending = redeployedDirectories().find((dir) => isInside(dir, root));
+  if (offending) {
+    throw new Error(
+      `Document storage (${root}) is inside the deployed project directory (${offending}) ` +
+        "and would be wiped on the next deploy. Set STORAGE_DIR to an absolute path " +
+        "outside the project, e.g. /home/<account>/checkiq-storage.",
+    );
   }
-
-  // Last resort: project-relative (may be wiped on redeploy).
-  return resolve(process.cwd(), configured);
 }
 
 function tempRoot(): string {
@@ -139,6 +200,7 @@ export function resolveStoragePath(storageKey: string): string {
 
 /** Creates the storage directories at boot. */
 export async function ensureStorageDirectories(): Promise<void> {
+  assertStorageIsPersistent();
   const root = storageRoot();
   await mkdir(root, { recursive: true });
   await mkdir(tempRoot(), { recursive: true });

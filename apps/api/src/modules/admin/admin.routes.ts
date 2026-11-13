@@ -1,6 +1,6 @@
 ﻿import { Router } from "express";
 import { hash } from "@node-rs/argon2";
-import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, like, lte, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, like, lte, notInArray, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import {
   adminUserListSchema,
@@ -21,7 +21,8 @@ import { newId } from "../../lib/ids.js";
 import { recordAudit } from "../../services/audit.service.js";
 import { queueNotification } from "../../services/notification.service.js";
 import { clearConfigCache } from "../../services/config.service.js";
-import { USER_ROLES } from "@checkiq/contracts";
+import { TERMINAL_CASE_STATUSES, USER_ROLES } from "@checkiq/contracts";
+import type { Principal } from "../../types/express.js";
 
 export const adminRouter = Router();
 
@@ -39,6 +40,33 @@ const templateParam = z.object({
 });
 
 /**
+ * Administrator-level roles. Granting, revoking or acting on an account that
+ * holds one of these requires `role:manage` (Super Administrator only), so an
+ * Administrator cannot escalate themselves or lock out a Super Administrator.
+ */
+const PRIVILEGED_ROLES = new Set<string>(["ADMINISTRATOR", "SUPER_ADMINISTRATOR"]);
+
+function canManagePrivileged(principal: Principal): boolean {
+  return principal.permissions.has("role:manage");
+}
+
+async function activeRolesOf(userId: string): Promise<string[]> {
+  const { db } = getDatabase();
+  const rows = await db
+    .select({ code: schema.userRoles.roleCode })
+    .from(schema.userRoles)
+    .where(and(eq(schema.userRoles.userId, userId), isNull(schema.userRoles.revokedAt)));
+  return rows.map((row) => row.code);
+}
+
+/** Refuses an action on an administrator-level account by someone below Super Administrator. */
+function assertCanActOn(principal: Principal, targetRoles: string[]): void {
+  if (targetRoles.some((role) => PRIVILEGED_ROLES.has(role)) && !canManagePrivileged(principal)) {
+    throw forbidden("Only a Super Administrator can manage administrator accounts");
+  }
+}
+
+/**
  * GET /api/admin/users
  */
 adminRouter.get(
@@ -52,16 +80,30 @@ adminRouter.get(
 
     const conditions: SQL[] = [];
     if (filters.search) {
-      const term = `%${filters.search}%`;
+      // Escape LIKE wildcards so "%" or "_" in the search box match literally.
+      const escaped = filters.search.replace(/[\\%_]/g, (ch) => `\\${ch}`);
+      const term = `%${escaped}%`;
       conditions.push(
         or(
-          eq(schema.users.emailNormalized, filters.search.toLowerCase()),
+          like(schema.users.emailNormalized, `%${escaped.toLowerCase()}%`),
           like(schema.users.fullName, term),
         )!,
       );
     }
+    if (filters.userType) {
+      const hasStaffRole = sql`EXISTS (
+        SELECT 1 FROM \`user_roles\` \`ur\`
+         WHERE \`ur\`.\`user_id\` = ${schema.users.id}
+           AND \`ur\`.\`revoked_at\` IS NULL
+           AND \`ur\`.\`role_code\` <> ${"CANDIDATE"}
+      )`;
+      conditions.push(filters.userType === "staff" ? hasStaffRole : sql`NOT ${hasStaffRole}`);
+    }
     if (filters.isActive !== undefined) {
       conditions.push(eq(schema.users.isActive, filters.isActive));
+    }
+    if (filters.isEmailVerified !== undefined) {
+      conditions.push(eq(schema.users.isEmailVerified, filters.isEmailVerified));
     }
     if (filters.isDeleted !== undefined) {
       if (filters.isDeleted) {
@@ -71,15 +113,13 @@ adminRouter.get(
       }
     }
     if (filters.role) {
+      // IN, not "=": the subquery returns one row per user holding the role.
       conditions.push(
-        eq(
-          schema.users.id,
-          sql`(
-            SELECT \`ur\`.\`user_id\` FROM \`user_roles\` \`ur\`
-             WHERE \`ur\`.\`role_code\` = ${filters.role}
-               AND \`ur\`.\`revoked_at\` IS NULL
-          )`,
-        ),
+        sql`${schema.users.id} IN (
+          SELECT \`ur\`.\`user_id\` FROM \`user_roles\` \`ur\`
+           WHERE \`ur\`.\`role_code\` = ${filters.role}
+             AND \`ur\`.\`revoked_at\` IS NULL
+        )`,
       );
     }
     const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -102,14 +142,19 @@ adminRouter.get(
       })
       .from(schema.users)
       .where(where)
-      .orderBy(asc(schema.users.fullName))
+      // id breaks ties so pages never repeat or skip users with the same name.
+      .orderBy(asc(schema.users.fullName), asc(schema.users.id))
       .limit(filters.pageSize)
       .offset((filters.page - 1) * filters.pageSize);
 
-    const roleRows = await db
-      .select({ userId: schema.userRoles.userId, code: schema.userRoles.roleCode })
-      .from(schema.userRoles)
-      .where(isNull(schema.userRoles.revokedAt));
+    const userIds = rows.map((row) => row.id);
+    const roleRows =
+      userIds.length === 0
+        ? []
+        : await db
+            .select({ userId: schema.userRoles.userId, code: schema.userRoles.roleCode })
+            .from(schema.userRoles)
+            .where(and(inArray(schema.userRoles.userId, userIds), isNull(schema.userRoles.revokedAt)));
 
     const total = totalRows[0]?.value ?? 0;
     res.status(200).json({
@@ -309,6 +354,10 @@ adminRouter.post(
     const { db } = getDatabase();
     const emailNormalized = req.body.email.trim().toLowerCase();
 
+    if (payload.roles.some((role) => PRIVILEGED_ROLES.has(role)) && !canManagePrivileged(req.principal!)) {
+      throw forbidden("Only a Super Administrator can create administrator accounts");
+    }
+
     const [existing] = await db
       .select({ id: schema.users.id })
       .from(schema.users)
@@ -385,10 +434,21 @@ adminRouter.patch(
       throw forbidden("Deleted accounts cannot be reactivated. Undelete by clearing the deleted_at column.");
     }
 
-    const currentRoles = await db
-      .select({ code: schema.userRoles.roleCode })
-      .from(schema.userRoles)
-      .where(eq(schema.userRoles.userId, existing.id));
+    const isSelf = existing.id === req.principal!.userId;
+    if (isSelf && payload.isActive === false) {
+      throw forbidden("You cannot disable your own account");
+    }
+    if (isSelf && payload.roles) {
+      throw forbidden("You cannot change your own roles");
+    }
+
+    // Only active roles count: a revoked row stays in user_roles for history.
+    const activeRoleCodes = await activeRolesOf(existing.id);
+    assertCanActOn(req.principal!, activeRoleCodes);
+    if (payload.roles?.some((role) => PRIVILEGED_ROLES.has(role)) && !canManagePrivileged(req.principal!)) {
+      throw forbidden("Only a Super Administrator can grant administrator roles");
+    }
+    const currentRoles = activeRoleCodes.map((code) => ({ code }));
 
     await db.transaction(async (tx) => {
       const patch: Partial<typeof schema.users.$inferInsert> = {};
@@ -402,18 +462,27 @@ adminRouter.patch(
         await tx.update(schema.users).set(patch).where(eq(schema.users.id, existing.id));
       }
 
-      if (payload.roles) {
-        const next = new Set<string>(payload.roles);
-        const current = new Set<string>(currentRoles.map((role) => role.code));
-        const toAdd = [...next].filter((role) => !current.has(role));
-        const toRemove = [...current].filter((role) => !next.has(role));
+      const next = new Set<string>(payload.roles ?? []);
+      const current = new Set<string>(currentRoles.map((role) => role.code));
+      const toAdd = [...next].filter((role) => !current.has(role));
+      const toRemove = [...current].filter((role) => !next.has(role));
+
+      // Submitting the same roles again is a no-op: no audit, no notification.
+      if (payload.roles && (toAdd.length > 0 || toRemove.length > 0)) {
 
         for (const role of toAdd) {
-          await tx.insert(schema.userRoles).values({
-            userId: existing.id,
-            roleCode: role,
-            assignedBy: req.principal!.userId,
-          });
+          // (user_id, role_code) is the primary key, so re-granting a role that
+          // was revoked earlier must revive the existing row, not insert.
+          await tx
+            .insert(schema.userRoles)
+            .values({
+              userId: existing.id,
+              roleCode: role,
+              assignedBy: req.principal!.userId,
+            })
+            .onDuplicateKeyUpdate({
+              set: { revokedAt: null, assignedAt: new Date(), assignedBy: req.principal!.userId },
+            });
         }
         for (const role of toRemove) {
           await tx
@@ -423,6 +492,7 @@ adminRouter.patch(
               and(
                 eq(schema.userRoles.userId, existing.id),
                 eq(schema.userRoles.roleCode, role),
+                isNull(schema.userRoles.revokedAt),
               ),
             );
         }
@@ -573,18 +643,23 @@ adminRouter.delete(
       res.status(200).json({ data: { id: user.id, deleted: false } });
       return;
     }
+    assertCanActOn(req.principal!, await activeRolesOf(user.id));
 
     // Prevent deletion of users who carry active workloads. A candidate's
     // verification case is linked via candidate_profiles (not directly to
     // users), so soft-deleting a candidate does not orphan any case. Verifiers
-    // or reviewers who are currently assigned, however, must be re-assigned first.
+    // or reviewers who are currently assigned to an open case, however, must
+    // be re-assigned first. Closed cases do not block deletion.
     const activeCases = await db
       .select({ id: schema.bgvCases.id })
       .from(schema.bgvCases)
       .where(
-        or(
-          eq(schema.bgvCases.assignedVerifierId, userId),
-          eq(schema.bgvCases.assignedReviewerId, userId),
+        and(
+          or(
+            eq(schema.bgvCases.assignedVerifierId, userId),
+            eq(schema.bgvCases.assignedReviewerId, userId),
+          ),
+          notInArray(schema.bgvCases.status, [...TERMINAL_CASE_STATUSES]),
         ),
       )
       .limit(1);
@@ -654,6 +729,7 @@ adminRouter.post(
       .limit(1);
     if (!user) throw notFound("User not found");
     if (user.deletedAt) throw notFound("User not found");
+    assertCanActOn(req.principal!, await activeRolesOf(user.id));
 
     const temporaryPassword = generatePassword();
     const passwordHash = await hash(temporaryPassword, {

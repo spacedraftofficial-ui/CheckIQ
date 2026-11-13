@@ -38,7 +38,8 @@ Zod for forms, and Tailwind CSS for styling.
 | `/ops/cases/:caseId` | Staff | Case detail, checks, documents, clarification, history. |
 | `/ops/cases/:caseId/verification` | Staff | Record results, generate a score, review and approve. |
 | `/ops/cases/:caseId/report` | Staff | The internal BGV report. |
-| `/admin/users` | Administrator | Staff accounts and roles. |
+| `/admin/users` | Administrator | Candidate accounts ("Candidates" tab). |
+| `/admin/users/staff` | Administrator | Staff and administrator accounts and roles ("Staff & admins" tab). Staff accounts are created here. |
 | `/admin/packages` | Administrator | Packages and the document catalogue. |
 | `/admin/config` | Administrator | Runtime configuration and scoring configurations. |
 

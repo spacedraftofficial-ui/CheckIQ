@@ -11,7 +11,10 @@ import { forbidden, notFound, uploadRejected } from "../../lib/errors.js";
 import { newId } from "../../lib/ids.js";
 import { loadUploadRules, validateUpload } from "../../lib/file-validation.js";
 import { createScanner } from "../../lib/scanner.js";
-import { storeUploadedFile, temporaryDirectory } from "../../lib/storage.js";
+import { createReadStream } from "node:fs";
+import { stat } from "node:fs/promises";
+import type { Response } from "express";
+import { resolveStoragePath, storeUploadedFile, temporaryDirectory } from "../../lib/storage.js";
 import { recordAudit } from "../../services/audit.service.js";
 import { queueNotification } from "../../services/notification.service.js";
 import { resolveCase } from "../../services/access.service.js";
@@ -313,8 +316,10 @@ documentsRouter.get(
       }
     }
 
-    const { resolveStoragePath } = await import("../../lib/storage.js");
-    const filePath = resolveStoragePath(version.storageKey);
+    // Check the file exists BEFORE auditing or sending headers: a missing file
+    // must be a clean 404, not a response whose Content-Length promises bytes
+    // that never arrive.
+    const filePath = await locateStoredFile(version.storageKey);
 
     await recordAudit({
       action: "DOCUMENT_DOWNLOADED",
@@ -330,23 +335,7 @@ documentsRouter.get(
       requestId: req.requestId,
     });
 
-    res.setHeader("Content-Type", version.mimeType);
-    res.setHeader("Content-Length", String(version.sizeBytes));
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${encodeURIComponent(version.originalFilename)}"`,
-    );
-    res.setHeader("X-Content-Type-Options", "nosniff");
-    const { createReadStream } = await import("node:fs");
-    const stream = createReadStream(filePath);
-    stream.on("error", (err: NodeJS.ErrnoException) => {
-      if (!res.headersSent) {
-        res.status(err.code === "ENOENT" ? 404 : 500).json({
-          error: { code: "NOT_FOUND", message: "Document file is not available on the server." },
-        });
-      }
-    });
-    stream.pipe(res);
+    sendStoredFile(res, filePath, version, "attachment");
   },
 );
 
@@ -383,8 +372,10 @@ documentsRouter.get(
       }
     }
 
-    const { resolveStoragePath } = await import("../../lib/storage.js");
-    const filePath = resolveStoragePath(version.storageKey);
+    // Check the file exists BEFORE auditing or sending headers: a missing file
+    // must be a clean 404, not a response whose Content-Length promises bytes
+    // that never arrive.
+    const filePath = await locateStoredFile(version.storageKey);
 
     await recordAudit({
       action: "DOCUMENT_VIEWED",
@@ -400,23 +391,7 @@ documentsRouter.get(
       requestId: req.requestId,
     });
 
-    res.setHeader("Content-Type", version.mimeType);
-    res.setHeader("Content-Length", String(version.sizeBytes));
-    res.setHeader(
-      "Content-Disposition",
-      `inline; filename="${encodeURIComponent(version.originalFilename)}"`,
-    );
-    res.setHeader("X-Content-Type-Options", "nosniff");
-    const { createReadStream } = await import("node:fs");
-    const stream = createReadStream(filePath);
-    stream.on("error", (err: NodeJS.ErrnoException) => {
-      if (!res.headersSent) {
-        res.status(err.code === "ENOENT" ? 404 : 500).json({
-          error: { code: "NOT_FOUND", message: "Document file is not available on the server." },
-        });
-      }
-    });
-    stream.pipe(res);
+    sendStoredFile(res, filePath, version, "inline");
   },
 );
 
@@ -462,3 +437,38 @@ documentsRouter.get(
 );
 
 export { requirePermission };
+
+/** Resolves a storage key to a file on disk, or 404s if the file is gone. */
+async function locateStoredFile(storageKey: string): Promise<string> {
+  const filePath = resolveStoragePath(storageKey);
+  try {
+    const info = await stat(filePath);
+    if (!info.isFile()) throw new Error("not a file");
+  } catch {
+    throw notFound("The document file is not available on the server. Ask the candidate to upload it again.");
+  }
+  return filePath;
+}
+
+function sendStoredFile(
+  res: Response,
+  filePath: string,
+  version: { mimeType: string; sizeBytes: number; originalFilename: string },
+  disposition: "attachment" | "inline",
+): void {
+  res.setHeader("Content-Type", version.mimeType);
+  res.setHeader("Content-Length", String(version.sizeBytes));
+  res.setHeader(
+    "Content-Disposition",
+    `${disposition}; filename*=UTF-8''${encodeURIComponent(version.originalFilename)}`,
+  );
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Cache-Control", "private, no-store");
+  const stream = createReadStream(filePath);
+  stream.on("error", () => {
+    // Headers may already be on the wire; the only safe move is to abort.
+    if (!res.headersSent) res.status(500).end();
+    else res.destroy();
+  });
+  stream.pipe(res);
+}

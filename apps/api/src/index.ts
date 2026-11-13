@@ -2,7 +2,7 @@ import { createApp } from "./app.js";
 import { getConfig } from "./config.js";
 import { closeDatabase, getDatabase } from "./db/client.js";
 import { getLogger } from "./lib/logger.js";
-import { ensureStorageDirectories } from "./lib/storage.js";
+import { ensureStorageDirectories, storageRoot } from "./lib/storage.js";
 import { applyMigrations, defaultMigrationsFolder } from "./db/apply-migrations.js";
 import { runSeed } from "./db/seed.js";
 
@@ -14,6 +14,7 @@ async function main(): Promise<void> {
   const config = getConfig();
 
   await ensureStorageDirectories();
+  logger.info({ storageRoot: storageRoot() }, "Document storage ready");
   getDatabase();
 
   // Run migrations on startup

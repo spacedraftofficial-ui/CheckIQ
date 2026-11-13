@@ -17,11 +17,21 @@ export type AdminUser = z.infer<typeof adminUserSchema>;
 export const adminUserListSchema = paginationQuerySchema.extend({
   search: z.string().trim().max(120).optional(),
   role: userRoleSchema.optional(),
+  /**
+   * `staff` — users holding any active non-candidate role (executives,
+   * reviewers, HR, administrators, super administrators).
+   * `candidate` — everyone else.
+   */
+  userType: z.enum(["candidate", "staff"]).optional(),
   isActive: z
     .enum(["true", "false"])
     .transform((v) => v === "true")
     .optional(),
   isDeleted: z
+    .enum(["true", "false"])
+    .transform((v) => v === "true")
+    .optional(),
+  isEmailVerified: z
     .enum(["true", "false"])
     .transform((v) => v === "true")
     .optional(),
@@ -31,7 +41,11 @@ export type AdminUserListQuery = z.infer<typeof adminUserListSchema>;
 export const createStaffUserSchema = z.object({
   email: z.email(),
   fullName: z.string().trim().min(2).max(160),
-  roles: z.array(userRoleSchema).min(1),
+  // Candidates sign up themselves; a staff account cannot carry CANDIDATE.
+  roles: z
+    .array(userRoleSchema.exclude(["CANDIDATE"]))
+    .min(1)
+    .refine((roles) => new Set(roles).size === roles.length, { error: "Roles must be unique" }),
   temporaryPassword: z.string().min(10).max(128),
 });
 export type CreateStaffUserRequest = z.infer<typeof createStaffUserSchema>;

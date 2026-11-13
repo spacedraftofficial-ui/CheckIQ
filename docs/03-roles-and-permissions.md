@@ -190,6 +190,10 @@ Rules that apply to every handler:
 `SUPER_ADMINISTRATOR` may:
 
 - Manage roles, permissions and role assignment
+- Create, update, disable, delete or reset the password of an `ADMINISTRATOR`
+  or `SUPER_ADMINISTRATOR` account, and grant either role (an `ADMINISTRATOR`
+  holds `user:manage` but not `role:manage`, so they manage candidate and
+  operational staff accounts only)
 - Reopen a closed case (mandatory reason, audit event)
 - Approve an active scoring configuration
 - Toggle configuration flags that affect verification behaviour

@@ -213,7 +213,15 @@ export function App() {
             path="/admin/users"
             element={
               <RequireAuth roles={["ADMINISTRATOR", "SUPER_ADMINISTRATOR"]}>
-                <AdminUsersPage />
+                <AdminUsersPage key="candidate" userType="candidate" />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/admin/users/staff"
+            element={
+              <RequireAuth roles={["ADMINISTRATOR", "SUPER_ADMINISTRATOR"]}>
+                <AdminUsersPage key="staff" userType="staff" />
               </RequireAuth>
             }
           />
@@ -221,7 +229,7 @@ export function App() {
             path="/admin/users/history"
             element={
               <RequireAuth roles={["ADMINISTRATOR", "SUPER_ADMINISTRATOR"]}>
-                <AdminUsersPage showDeleted={true} />
+                <AdminUsersPage key="deleted" showDeleted={true} />
               </RequireAuth>
             }
           />

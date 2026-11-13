@@ -170,7 +170,7 @@ verification sources, the score or the eligibility result.
 | `GET` | `/api/documents/:documentId/versions/:versionId/download` | Case scope + `verification:read` (staff) | Download a stored file. |
 | `GET` | `/api/documents/:documentId/versions/:versionId/view` | Case scope + `verification:read` (staff) | View a stored file inline. |
 
-**Storage configuration**: On Hostinger, set `STORAGE_DIR` to an absolute path outside the project directory so uploaded files survive auto-deploys. A missing file returns `404 NOT_FOUND`.
+**Storage configuration**: On Hostinger, set `STORAGE_DIR` to an absolute path outside the project directory (e.g. `/home/u123456789/checkiq-storage`) so uploaded files survive auto-deploys. A relative `STORAGE_DIR` in production is relocated to `$HOME/.checkiq/storage` (the home directory is derived from `HOSTINGER_SOURCE_DIR` when `HOME` is unset). In production the API refuses to start if the storage root is inside the deployed project directory, and it logs the resolved root at boot (`Document storage ready`). A missing file returns `404 NOT_FOUND`.
 
 Upload responses:
 
@@ -348,10 +348,12 @@ never available to a candidate.
 
 | Method | Path | Access | Description |
 |--------|------|--------|-------------|
-| `GET` | `/api/admin/users` | `user:manage`, `role:manage` | List users. |
-| `POST` | `/api/admin/users` | `user:manage` | Create a staff account. |
-| `PATCH` | `/api/admin/users/:id` | `user:manage`, `permission:manage` | Update a user, including roles and `mustChangePassword`. |
-| `DELETE` | `/api/admin/users/:id` | `user:manage` | Soft-delete a user (sets `deletedAt`). |
+| `GET` | `/api/admin/users` | `user:manage`, `role:manage` | List users. Filters: `search` (name or email, partial), `role`, `userType` (`candidate` | `staff` — staff means any active non-candidate role), `isActive`, `isEmailVerified`, `isDeleted`. |
+| `POST` | `/api/admin/users` | `user:manage` | Create a staff account. `CANDIDATE` is not accepted as a role. Granting `ADMINISTRATOR` or `SUPER_ADMINISTRATOR` additionally requires `role:manage`. |
+| `PATCH` | `/api/admin/users/:id` | `user:manage`, `permission:manage` | Update a user, including roles and `mustChangePassword`. A caller cannot disable themselves or change their own roles. Re-granting a previously revoked role revives it. |
+| `DELETE` | `/api/admin/users/:id` | `user:manage` | Soft-delete a user (sets `deletedAt`). Blocked while the user is assigned to a case that is not `CLOSED`. |
+
+**Administrator-level accounts.** Acting on a user who holds `ADMINISTRATOR` or `SUPER_ADMINISTRATOR` (update, delete, reset password), or granting either role, requires `role:manage`, which only a Super Administrator holds. An Administrator therefore cannot escalate their own access or lock out a Super Administrator.
 | `POST` | `/api/admin/users/:id/reset-password` | `user:manage` | Generate a temporary password. Sets `mustChangePassword=true`, invalidates sessions, returns temp password. Notifies user. |
 | `GET` | `/api/admin/roles` | `role:manage`, `config:read` | The roles and their permissions. |
 | `GET` | `/api/admin/packages` | `config:read`, `package:manage` | The BGV packages. |

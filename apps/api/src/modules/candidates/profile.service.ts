@@ -274,10 +274,14 @@ export async function collectMissingProfileFields(
     .where(eq(schema.bgvPackageProfileFields.packageId, packageId));
   const required = new Set(requiredFields.map((row) => row.fieldKey));
 
-  const [addresses, education, employments] = await Promise.all([
+  const [addresses, education, employments, customValues] = await Promise.all([
     db.select().from(schema.candidateAddresses).where(eq(schema.candidateAddresses.profileId, profileId)),
     db.select().from(schema.candidateEducation).where(eq(schema.candidateEducation.profileId, profileId)),
     db.select().from(schema.candidateEmployments).where(eq(schema.candidateEmployments.profileId, profileId)),
+    db
+      .select({ fieldKey: schema.candidateProfileValues.fieldKey, valueText: schema.candidateProfileValues.valueText })
+      .from(schema.candidateProfileValues)
+      .where(eq(schema.candidateProfileValues.profileId, profileId)),
   ]);
 
   const satisfied = new Set<string>();
@@ -293,6 +297,11 @@ export async function collectMissingProfileFields(
   if (profile.panEncrypted) satisfied.add("pan");
   if (profile.passportNumberEncrypted) satisfied.add("passportNumber");
   if (profile.drivingLicenceNumberEncrypted) satisfied.add("drivingLicenceNumber");
+  // Custom (data-driven) profile fields such as contactNumbers are stored as
+  // key/value rows; a blank value does not satisfy a required field.
+  for (const row of customValues) {
+    if (row.valueText && row.valueText.trim().length > 0) satisfied.add(row.fieldKey);
+  }
 
   return [...required].filter((field) => !satisfied.has(field));
 }

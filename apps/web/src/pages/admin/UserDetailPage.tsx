@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2, ArrowLeft, Mail, ShieldCheck, ToggleLeft, ToggleRight, KeyRound } from "lucide-react";
 import { ApiError, request } from "../../lib/api";
+import { useAuth } from "../../lib/auth-context";
 import { ErrorState, InlineError, LoadingBlock, StatusBadge } from "../../components/States";
 
 interface UserDetail {
@@ -57,9 +58,14 @@ const roleLabels: Record<string, string> = {
   SUPER_ADMINISTRATOR: "Super Administrator",
 };
 
+/** Roles only a Super Administrator may act on (enforced by the API). */
+const PRIVILEGED_ROLES = new Set(["ADMINISTRATOR", "SUPER_ADMINISTRATOR"]);
+
 export function UserDetailPage() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
+  const { user: currentUser } = useAuth();
+  const isSuperAdmin = Boolean(currentUser?.roles.includes("SUPER_ADMINISTRATOR"));
   const [resetResult, setResetResult] = useState<{ temporaryPassword: string } | null>(null);
 
   const user = useQuery({
@@ -126,25 +132,50 @@ export function UserDetailPage() {
   const data = user.data;
   if (!data) return <LoadingBlock label="Loading user" />;
 
+  const isStaffAccount = data.roles.some((role) => role !== "CANDIDATE");
+  const backTo = data.deletedAt ? "/admin/users/history" : isStaffAccount ? "/admin/users/staff" : "/admin/users";
+  const isSelf = data.id === currentUser?.id;
+  const isPrivilegedTarget = data.roles.some((role) => PRIVILEGED_ROLES.has(role));
+  // Mirrors the API: no self-service lockout, and only a Super Administrator
+  // may act on administrator accounts.
+  const canManage = !isSelf && (!isPrivilegedTarget || isSuperAdmin);
+  const mutationError = [deactivate.error, deleteUser.error].find(
+    (caught): caught is ApiError => caught instanceof ApiError,
+  );
+
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <Link to="/admin/users" className="flex items-center gap-1 text-sm font-semibold text-brand-700 underline">
+          <Link to={backTo} className="flex items-center gap-1 text-sm font-semibold text-brand-700 underline">
             <ArrowLeft className="h-4 w-4" aria-hidden={true} />
-            Back to users
+            Back to {data.deletedAt ? "deleted users" : isStaffAccount ? "staff & admins" : "candidates"}
           </Link>
           <h1 className="mt-2 text-2xl font-bold text-ink-900">{data.fullName}</h1>
           <p className="mt-1 text-sm text-ink-600 break-all">{data.email}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <StatusBadge tone={data.isActive ? "success" : "danger"}>
-            {data.isActive ? "Active" : "Disabled"}
-          </StatusBadge>
+          {data.deletedAt ? (
+            <StatusBadge tone="neutral">Deleted</StatusBadge>
+          ) : (
+            <StatusBadge tone={data.isActive ? "success" : "danger"}>
+              {data.isActive ? "Active" : "Disabled"}
+            </StatusBadge>
+          )}
+          {canManage && !data.deletedAt && (
           <button
             type="button"
             className={data.isActive ? "btn-warning" : "btn-secondary"}
-            onClick={() => deactivate.mutate(!data.isActive)}
+            disabled={deactivate.isPending}
+            onClick={() => {
+              if (
+                data.isActive &&
+                !confirm("Disable this user? All of their active sessions are revoked immediately.")
+              ) {
+                return;
+              }
+              deactivate.mutate(!data.isActive);
+            }}
           >
             {data.isActive ? (
               <>
@@ -158,10 +189,12 @@ export function UserDetailPage() {
                </>
              )}
            </button>
-            {!data.deletedAt && (
+          )}
+            {canManage && !data.deletedAt && (
               <button
                 type="button"
                 className="btn-danger"
+                disabled={deleteUser.isPending}
                 onClick={() => {
                   const reason = window.prompt(
                     "Delete this user? Enter a reason (or leave blank):",
@@ -175,7 +208,7 @@ export function UserDetailPage() {
                 Delete
               </button>
             )}
-            {!data.deletedAt && (
+            {canManage && !data.deletedAt && (
               <button
                 type="button"
                 className="btn-secondary"
@@ -224,9 +257,9 @@ export function UserDetailPage() {
         </div>
       ) : null}
 
-      {deactivate.isError && deactivate.error instanceof ApiError ? (
+      {mutationError ? (
         <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">
-          {deactivate.error.message}
+          {mutationError.message}
         </div>
       ) : null}
 

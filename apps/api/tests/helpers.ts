@@ -174,6 +174,8 @@ export async function completeProfile(candidate: CandidateSession): Promise<void
           isCurrent: true,
         },
       ],
+      // Required profile field (replaced the contact-reference document).
+      customFields: [{ fieldKey: "contactNumbers", value: "HOD: +919800000001, Manager: +919800000002" }],
     },
   });
   if (response.status !== 200) {

@@ -1,6 +1,6 @@
 import { hash } from "@node-rs/argon2";
 import { PERMISSIONS } from "@checkiq/contracts";
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { getConfig } from "../config.js";
 import { schema } from "./client.js";
 import type { Db } from "./types.js";
@@ -13,6 +13,7 @@ import {
   DOCUMENT_TYPE_SEED,
   NOTIFICATION_TEMPLATE_SEED,
   PROFILE_FIELD_SEED,
+  RETIRED_DOCUMENT_TYPE_CODES,
   SCORING_COMPONENT_SEED,
   SCORING_EXCLUDED_STATUSES,
   SCORING_MULTIPLIERS,
@@ -244,6 +245,9 @@ export async function runSeed(db: Db): Promise<void> {
   }
   logger.info({ code: STANDARD_PACKAGE_SEED.code }, "BGV package seeded");
 
+  // ---- retired document types ---------------------------------------------
+  await retireDocumentTypes(db, typeIds);
+
   // ---- scoring configuration (APPROVED and ACTIVE for development) --------
   const scoringConfigId = uuid();
   await db
@@ -393,4 +397,66 @@ export async function runSeed(db: Db): Promise<void> {
     logger.info({ email: config.SEED_ADMIN_EMAIL }, "Development administrator already exists");
   }
   logger.info("Seed completed");
+}
+
+/**
+ * Removes retired document types from packages and open cases without
+ * destroying uploaded evidence. Idempotent: a second run finds nothing to do.
+ */
+async function retireDocumentTypes(db: Db, typeIds: Map<string, string>): Promise<void> {
+  const logger = getLogger();
+  for (const code of RETIRED_DOCUMENT_TYPE_CODES) {
+    const typeId = typeIds.get(code);
+    if (!typeId) continue;
+
+    await db
+      .update(schema.documentTypes)
+      .set({ isActive: false })
+      .where(eq(schema.documentTypes.id, typeId));
+
+    const requirements = await db
+      .select({ id: schema.documentRequirements.id })
+      .from(schema.documentRequirements)
+      .where(eq(schema.documentRequirements.documentTypeId, typeId));
+
+    for (const requirement of requirements) {
+      const docs = await db
+        .select({ id: schema.documents.id })
+        .from(schema.documents)
+        .where(eq(schema.documents.requirementId, requirement.id));
+      const docIds = docs.map((doc) => doc.id);
+
+      const uploadedRows =
+        docIds.length === 0
+          ? []
+          : await db
+              .selectDistinct({ documentId: schema.documentVersions.documentId })
+              .from(schema.documentVersions)
+              .where(inArray(schema.documentVersions.documentId, docIds));
+      const uploaded = new Set(uploadedRows.map((row) => row.documentId));
+      const emptySlots = docIds.filter((id) => !uploaded.has(id));
+
+      if (emptySlots.length > 0) {
+        await db.delete(schema.documents).where(inArray(schema.documents.id, emptySlots));
+      }
+
+      if (uploaded.size === 0) {
+        await db
+          .delete(schema.documentRequirements)
+          .where(eq(schema.documentRequirements.id, requirement.id));
+      } else {
+        // Keep the requirement so uploaded files stay reachable, but it no
+        // longer blocks submission.
+        await db
+          .update(schema.documentRequirements)
+          .set({ isMandatory: false })
+          .where(eq(schema.documentRequirements.id, requirement.id));
+      }
+
+      logger.info(
+        { code, requirementId: requirement.id, removedSlots: emptySlots.length, keptUploads: uploaded.size },
+        "Retired document requirement",
+      );
+    }
+  }
 }

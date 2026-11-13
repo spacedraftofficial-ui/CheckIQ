@@ -56,6 +56,19 @@ export const DOCUMENT_TYPE_SEED = [
   { categoryCode: "OTHER", code: "SUPPORTING_DOCUMENT", name: "Other supporting document", displayOrder: 1 },
 ] as const;
 
+/**
+ * Document types that were removed from the catalogue. The seed only inserts
+ * and updates, so simply deleting a row above leaves it in existing databases.
+ * The seed retires these explicitly: the type is deactivated, its requirements
+ * are removed from every package, and empty (never uploaded) document slots
+ * are removed from existing cases. Anything a candidate already uploaded is
+ * kept, as optional, so no evidence is destroyed.
+ */
+export const RETIRED_DOCUMENT_TYPE_CODES = [
+  "DECLARED_DOCUMENT", // "Documents for authenticity check"
+  "CONTACT_REFERENCE", // replaced by the contactNumbers profile field
+] as const;
+
 export const CHECK_DEFINITION_SEED = [
   {
     code: "IDENTITY",
