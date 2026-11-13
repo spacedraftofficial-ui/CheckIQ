@@ -106,6 +106,7 @@ casesRouter.get(
       const searchClause = or(
         eq(schema.candidateProfiles.candidateId, filters.search),
         like(schema.candidateProfiles.fullName, term),
+        like(schema.candidateProfiles.email, term),
         like(schema.bgvCases.caseNumber, term),
       );
       if (searchClause) conditions.push(searchClause);
@@ -134,6 +135,7 @@ casesRouter.get(
         caseNumber: schema.bgvCases.caseNumber,
         candidateId: schema.candidateProfiles.candidateId,
         candidateName: schema.candidateProfiles.fullName,
+        candidateEmail: schema.candidateProfiles.email,
         company: schema.bgvCases.company,
         department: schema.bgvCases.department,
         position: schema.bgvCases.position,
@@ -174,6 +176,7 @@ casesRouter.get(
         caseNumber: row.caseNumber,
         candidateId: row.candidateId,
         candidateName: row.candidateName,
+        candidateEmail: row.candidateEmail,
         company: row.company,
         department: row.department,
         position: row.position,

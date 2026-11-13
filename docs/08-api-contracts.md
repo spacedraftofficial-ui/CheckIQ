@@ -204,7 +204,7 @@ accepted. Allowed formats: PDF, JPG, PNG.").
 | Method | Path | Access | Description |
 |--------|------|--------|-------------|
 | `POST` | `/api/cases` | `case:create` | Open a case for a candidate who has already registered. |
-| `GET` | `/api/cases` | `case:list:queue` / `case:read:own` | Permission-aware case search. |
+| `GET` | `/api/cases` | `case:list:queue` / `case:read:own` | Permission-aware case search. Each item includes `candidateEmail`; `search` matches candidate ID, name, email (partial) or case number. |
 | `GET` | `/api/cases/queue-counts` | `case:list:queue` | Queue counts by status. |
 | `GET` | `/api/cases/:caseId` | Case scope | Case detail. |
 | `GET` | `/api/cases/:caseId/history` | Case scope | The status history. |

@@ -11,6 +11,7 @@ interface CaseListItem {
   caseNumber: string;
   candidateId: string;
   candidateName: string;
+  candidateEmail: string;
   company: string | null;
   department: string | null;
   position: string | null;
@@ -179,7 +180,7 @@ export function OpsDashboard() {
               <input
                 id="search"
                 className="input pl-9"
-                placeholder="Candidate ID, name or case number"
+                placeholder="Candidate ID, name, email or case number"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
@@ -270,6 +271,12 @@ export function OpsDashboard() {
                     </td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-ink-900">{item.candidateName}</p>
+                      <a
+                        href={`mailto:${item.candidateEmail}`}
+                        className="block break-all text-xs text-brand-700 hover:underline"
+                      >
+                        {item.candidateEmail}
+                      </a>
                       <p className="font-mono text-xs text-ink-500">{item.candidateId}</p>
                     </td>
                     <td className="px-4 py-3 text-ink-700">

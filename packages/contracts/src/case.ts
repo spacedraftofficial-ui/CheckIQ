@@ -38,6 +38,7 @@ export const caseListItemSchema = caseSchema.pick({
   caseNumber: true,
   candidateId: true,
   candidateName: true,
+  candidateEmail: true,
   company: true,
   department: true,
   position: true,

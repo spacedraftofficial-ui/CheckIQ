@@ -206,6 +206,11 @@ export function CaseDetailPage() {
             </Link>
           </p>
           <h1 className="mt-1 text-2xl font-bold text-ink-900">{data.candidateName}</h1>
+          <p className="mt-1 text-sm">
+            <a href={`mailto:${data.candidateEmail}`} className="break-all text-brand-700 hover:underline">
+              {data.candidateEmail}
+            </a>
+          </p>
           <p className="mt-1 text-sm text-ink-600">
             <span className="font-mono">{data.caseNumber}</span> ·{" "}
             <span className="font-mono">{data.candidateId}</span> · {data.packageName}
