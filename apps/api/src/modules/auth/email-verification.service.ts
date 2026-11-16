@@ -1,18 +1,11 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, ne, sql } from "drizzle-orm";
 import { getDatabase, schema } from "../../db/client.js";
 import { newId } from "../../lib/ids.js";
-import { sha256 } from "../../lib/crypto.js";
 import { getLogger } from "../../lib/logger.js";
 import { sendEmail } from "../../services/email.service.js";
 import { getBooleanConfig, getNumberConfig } from "../../services/config.service.js";
 
-/**
- * Generates a 6-digit numeric OTP code for email verification.
- * The raw code is never stored — only its SHA-256 hash is persisted.
- */
-function generateOtp(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
+import { MAX_OTP_ATTEMPTS, escapeHtml, generateOtp, hashOtp, otpMatches } from "./otp.js";
 
 export interface SendVerificationEmailInput {
   userId: string;
@@ -43,7 +36,7 @@ export async function sendVerificationEmail(
     .where(eq(schema.emailVerificationTokens.userId, input.userId));
 
   const code = generateOtp();
-  const codeHash = sha256(code);
+  const codeHash = hashOtp(code);
   const ttlMinutes = await getNumberConfig("email_verification.token_ttl_minutes", 1440);
   const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
 
@@ -58,7 +51,7 @@ export async function sendVerificationEmail(
   const subject = "Your CheckIQ verification code";
   const html = `
     <h2>Verify your email address</h2>
-    <p>Hello ${input.fullName},</p>
+    <p>Hello ${escapeHtml(input.fullName)},</p>
     <p>Your verification code is:</p>
     <p style="font-size: 2rem; font-weight: bold; letter-spacing: 0.25em; margin: 1rem 0; padding: 0.5rem 1rem; background: #f5f5f5; border-radius: 8px; display: inline-block;">${code}</p>
     <p>This code expires in ${ttlMinutes} minutes.</p>
@@ -86,40 +79,52 @@ export interface VerifyEmailResult {
 }
 
 /**
- * Verifies a 6-digit email verification OTP code.
- * The code is single-use: once successfully verified it is deleted.
- * On failure the code record is left intact (caller can retry).
+ * Verifies a 6-digit email verification code for the given email address.
+ *
+ * The code is looked up through the account, never on its own. A wrong code
+ * counts against the code's attempt limit; at the limit the code is destroyed
+ * and the candidate must request a new one. On success the code is consumed.
  */
-export async function verifyEmailOtp(code: string): Promise<VerifyEmailResult> {
+export async function verifyEmailOtp(email: string, code: string): Promise<VerifyEmailResult> {
   const { db } = getDatabase();
-  const codeHash = sha256(code);
+  const invalid = { success: false, message: "Invalid verification code" };
+
+  const [user] = await db
+    .select({ id: schema.users.id, isEmailVerified: schema.users.isEmailVerified })
+    .from(schema.users)
+    .where(and(eq(schema.users.emailNormalized, email.trim().toLowerCase()), isNull(schema.users.deletedAt)))
+    .limit(1);
+  if (!user) return invalid;
+  if (user.isEmailVerified) {
+    return { success: true, message: "This email address is already verified" };
+  }
 
   const [record] = await db
     .select()
     .from(schema.emailVerificationTokens)
-    .where(eq(schema.emailVerificationTokens.tokenHash, codeHash))
+    .where(eq(schema.emailVerificationTokens.userId, user.id))
     .limit(1);
-
-  if (!record) {
-    return { success: false, message: "Invalid verification code" };
-  }
+  if (!record) return invalid;
 
   if (record.expiresAt.getTime() <= Date.now()) {
-    await db
-      .delete(schema.emailVerificationTokens)
-      .where(eq(schema.emailVerificationTokens.id, record.id));
+    await db.delete(schema.emailVerificationTokens).where(eq(schema.emailVerificationTokens.id, record.id));
     return { success: false, message: "This verification code has expired. Request a new one." };
   }
 
-  await db
-    .update(schema.users)
-    .set({ isEmailVerified: true })
-    .where(eq(schema.users.id, record.userId));
+  if (!otpMatches(code, record.tokenHash)) {
+    if (record.failedAttempts + 1 >= MAX_OTP_ATTEMPTS) {
+      await db.delete(schema.emailVerificationTokens).where(eq(schema.emailVerificationTokens.id, record.id));
+      return { success: false, message: "Too many incorrect attempts. Request a new verification code." };
+    }
+    await db
+      .update(schema.emailVerificationTokens)
+      .set({ failedAttempts: sql`${schema.emailVerificationTokens.failedAttempts} + 1` })
+      .where(eq(schema.emailVerificationTokens.id, record.id));
+    return invalid;
+  }
 
-  await db
-    .delete(schema.emailVerificationTokens)
-    .where(eq(schema.emailVerificationTokens.id, record.id));
-
+  await db.update(schema.users).set({ isEmailVerified: true }).where(eq(schema.users.id, user.id));
+  await db.delete(schema.emailVerificationTokens).where(eq(schema.emailVerificationTokens.userId, user.id));
   return { success: true, message: "Email verified successfully" };
 }
 
@@ -156,10 +161,16 @@ export async function resendVerificationEmail(email: string): Promise<{ sent: bo
     const [staffRole] = await db
       .select({ code: schema.userRoles.roleCode })
       .from(schema.userRoles)
-      .where(eq(schema.userRoles.userId, user.id))
+      .where(
+        and(
+          eq(schema.userRoles.userId, user.id),
+          isNull(schema.userRoles.revokedAt),
+          ne(schema.userRoles.roleCode, "CANDIDATE"),
+        ),
+      )
       .limit(1);
 
-    if (staffRole && staffRole.code !== "CANDIDATE") {
+    if (staffRole) {
       return { sent: false, message: "Staff accounts do not require email verification" };
     }
   }
@@ -189,8 +200,11 @@ export async function checkEmailVerificationRequired(userId: string, roles: stri
   const verificationEnabled = await getBooleanConfig("email_verification.enabled", true);
   if (!verificationEnabled) return;
 
-  const isAdmin = roles.some((r) => r === "ADMINISTRATOR" || r === "SUPER_ADMINISTRATOR");
-  if (isAdmin) return;
+  // Staff accounts are created by an administrator, who vouches for the
+  // address. They are exempt unless the organisation opts in — the same rule
+  // resendVerificationEmail applies, so staff are never left unable to sign in.
+  const isStaff = roles.some((r) => r !== "CANDIDATE");
+  if (isStaff && !(await getBooleanConfig("auth.admin_requires_verification", false))) return;
 
   const { db } = getDatabase();
   const [user] = await db

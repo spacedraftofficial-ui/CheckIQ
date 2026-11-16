@@ -77,14 +77,17 @@ authRouter.post(
  * POST /api/auth/verify-email
  */
 const verifyEmailSchema = z.object({
-  code: z.string().length(6, "Enter the 6-digit verification code"),
+  // The code is only valid for this account; it is never looked up on its own.
+  email: z.email("Enter the email address you signed up with"),
+  code: z.string().regex(/^\d{6}$/, "Enter the 6-digit verification code"),
 });
 
 authRouter.post(
   "/verify-email",
+  authRateLimit,
   validate({ body: verifyEmailSchema }),
   async (req, res) => {
-    const result = await verifyEmailOtp(req.body.code);
+    const result = await verifyEmailOtp(req.body.email, req.body.code);
     if (result.success) {
       res.status(200).json({ data: { verified: true, message: result.message } });
     } else {
@@ -195,7 +198,7 @@ authRouter.post(
   authRateLimit,
   validate({ body: resetPasswordRequestSchema }),
   async (req, res) => {
-    const { userId } = await verifyPasswordResetOtp(req.body.code);
+    const { userId } = await verifyPasswordResetOtp(req.body.email, req.body.code);
     await resetPassword(userId, req.body.newPassword, requestContext(req));
     res.status(200).json({ data: { reset: true } });
   },

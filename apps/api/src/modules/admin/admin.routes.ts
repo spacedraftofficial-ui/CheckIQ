@@ -377,6 +377,9 @@ adminRouter.post(
         fullName: req.body.fullName.trim(),
         mobile: "+00000000000",
         mustChangePassword: true,
+        // The administrator creating the account vouches for the address, and
+        // staff cannot request a verification code themselves.
+        isEmailVerified: true,
       });
 
       await tx.insert(schema.userRoles).values(

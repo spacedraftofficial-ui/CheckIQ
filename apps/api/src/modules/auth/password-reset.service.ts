@@ -1,13 +1,13 @@
 import { hash } from "@node-rs/argon2";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { getDatabase, schema } from "../../db/client.js";
-import { sha256 } from "../../lib/crypto.js";
 import { getLogger } from "../../lib/logger.js";
 import { newId } from "../../lib/ids.js";
 import { sendEmail } from "../../services/email.service.js";
 import { getNumberConfig } from "../../services/config.service.js";
 import { recordAudit } from "../../services/audit.service.js";
 import { notFound, unauthenticated } from "../../lib/errors.js";
+import { MAX_OTP_ATTEMPTS, escapeHtml, generateOtp, hashOtp, otpMatches } from "./otp.js";
 
 const ARGON2_OPTIONS = {
   memoryCost: 19456,
@@ -72,7 +72,7 @@ export async function sendPasswordResetOtp(
     .where(eq(schema.passwordResetTokens.userId, user.id));
 
   const code = generateOtp();
-  const codeHash = sha256(code);
+  const codeHash = hashOtp(code);
   const tokenId = newId();
 
   await db.insert(schema.passwordResetTokens).values({
@@ -85,7 +85,7 @@ export async function sendPasswordResetOtp(
   const subject = "Your CheckIQ password reset code";
   const html = `
     <h2>Reset your password</h2>
-    <p>Hello ${user.fullName},</p>
+    <p>Hello ${escapeHtml(user.fullName)},</p>
     <p>You requested a password reset for your CheckIQ account.</p>
     <p>Your reset code is:</p>
     <p style="font-size: 2rem; font-weight: bold; letter-spacing: 0.25em; margin: 1rem 0; padding: 0.5rem 1rem; background: #f5f5f5; border-radius: 8px; display: inline-block;">${code}</p>
@@ -116,46 +116,52 @@ export interface VerifyPasswordResetOtpResult {
 }
 
 /**
- * Verifies a single-use password reset OTP code.
+ * Verifies a single-use password reset code for the given email address.
  *
- * On success the token is consumed (deleted) and the user id is returned so the
- * caller can set a new password. Expired or already-used codes are rejected.
+ * The code is looked up through the account, never on its own, so a guessed
+ * code cannot reset some other account's password. Wrong codes count against
+ * the attempt limit; at the limit the code is destroyed. On success the code
+ * is consumed and the user id is returned so the caller can set the password.
  */
 export async function verifyPasswordResetOtp(
+  email: string,
   code: string,
 ): Promise<VerifyPasswordResetOtpResult> {
   const { db } = getDatabase();
-  const codeHash = sha256(code);
+
+  const [user] = await db
+    .select({ id: schema.users.id, isActive: schema.users.isActive })
+    .from(schema.users)
+    .where(and(eq(schema.users.emailNormalized, email.trim().toLowerCase()), isNull(schema.users.deletedAt)))
+    .limit(1);
+  if (!user || !user.isActive) throw unauthenticated("Invalid reset code");
 
   const [record] = await db
     .select()
     .from(schema.passwordResetTokens)
-    .where(eq(schema.passwordResetTokens.tokenHash, codeHash))
+    .where(eq(schema.passwordResetTokens.userId, user.id))
     .limit(1);
-
-  if (!record) {
-    throw unauthenticated("Invalid reset code");
-  }
-
-  if (record.usedAt) {
-    await db
-      .delete(schema.passwordResetTokens)
-      .where(eq(schema.passwordResetTokens.id, record.id));
-    throw unauthenticated("This reset code has already been used");
-  }
+  if (!record || record.usedAt) throw unauthenticated("Invalid reset code");
 
   if (record.expiresAt.getTime() <= Date.now()) {
-    await db
-      .delete(schema.passwordResetTokens)
-      .where(eq(schema.passwordResetTokens.id, record.id));
+    await db.delete(schema.passwordResetTokens).where(eq(schema.passwordResetTokens.id, record.id));
     throw unauthenticated("This reset code has expired. Request a new one.");
   }
 
-  await db
-    .delete(schema.passwordResetTokens)
-    .where(eq(schema.passwordResetTokens.id, record.id));
+  if (!otpMatches(code, record.tokenHash)) {
+    if (record.failedAttempts + 1 >= MAX_OTP_ATTEMPTS) {
+      await db.delete(schema.passwordResetTokens).where(eq(schema.passwordResetTokens.id, record.id));
+      throw unauthenticated("Too many incorrect attempts. Request a new reset code.");
+    }
+    await db
+      .update(schema.passwordResetTokens)
+      .set({ failedAttempts: sql`${schema.passwordResetTokens.failedAttempts} + 1` })
+      .where(eq(schema.passwordResetTokens.id, record.id));
+    throw unauthenticated("Invalid reset code");
+  }
 
-  return { userId: record.userId };
+  await db.delete(schema.passwordResetTokens).where(eq(schema.passwordResetTokens.userId, user.id));
+  return { userId: user.id };
 }
 
 /**
@@ -202,8 +208,4 @@ export async function resetPassword(
       requestId: context.requestId ?? null,
     },
   );
-}
-
-function generateOtp(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
 }

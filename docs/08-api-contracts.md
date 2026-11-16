@@ -84,6 +84,20 @@ current `currentVersion` and `currentStatus`.
 | `POST` | `/api/auth/logout` | Public (cookie) | Revoke the current session. |
 | `GET` | `/api/auth/me` | Authenticated | The current session's user, roles and permissions. |
 | `POST` | `/api/auth/change-password` | Authenticated | Change the password. Invalidates every other session. |
+| `POST` | `/api/auth/verify-email` | Public (rate limited) | `{ email, code }`. Verifies the 6-digit code emailed at signup. |
+| `POST` | `/api/auth/resend-verification` | Public (rate limited) | `{ email }`. Issues a new verification code (replaces the old one). |
+| `POST` | `/api/auth/forgot-password` | Public (rate limited) | `{ email }`. Emails a 6-digit reset code. Same response whether or not the account exists. |
+| `POST` | `/api/auth/reset-password` | Public (rate limited) | `{ email, code, newPassword }`. Sets a new password and invalidates every session. |
+
+**One-time codes.** Verification and reset codes are generated with a
+cryptographically secure source, stored only as a SHA-256 hash, single-use,
+and always checked **together with the account's email** — a code is never
+looked up on its own, so the same code may be issued to two accounts at once
+and a guessed code cannot unlock another account. Each code allows 5 wrong
+attempts; it is then destroyed and a new one must be requested. Staff accounts
+created by an administrator are marked verified (the administrator vouches for
+the address) and are exempt from the sign-in verification check unless
+`auth.admin_requires_verification` is enabled.
 
 ### `POST /api/auth/signup`
 

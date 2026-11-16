@@ -15,7 +15,7 @@ policy decision for the organisation.
 | Refresh rotation | Every refresh rotates the token. Re-use of a rotated token revokes the whole token family and is audited as `AUTH_LOGOUT` with the reason "Refresh token reuse detected". |
 | Session invalidation | `users.session_epoch` is incremented on password change and on account deactivation. The access-token middleware compares the epoch on every request, so deactivation takes effect immediately. |
 | Account recovery | Out of scope for the MVP. `SEED_ADMIN_PASSWORD` and the seed account exist only for development. A production deployment must disable the seed and provide a recovery flow. |
-| OTP | Not implemented. If enabled later, the OTP must be hashed at rest, single-use, short-lived and rate limited — see decision D-17. |
+| OTP | Email verification and password reset use 6-digit codes: `crypto.randomInt`, SHA-256 at rest, single-use, expiring, rate limited per IP, bound to the account's email, and destroyed after 5 wrong attempts. See `apps/api/src/modules/auth/otp.ts`. OTP *login* is not implemented (decision D-17). |
 
 ### Why possession of a Candidate ID is not authentication
 

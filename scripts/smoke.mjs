@@ -96,12 +96,14 @@ assert(signup.body?.data?.email === candidateEmail, "the entered email is stored
 assert(signup.body?.data?.requiresEmailVerification === true, "signup requires email verification");
 assert(Boolean(signup.body?.data?.userId), "a user ID is returned");
 
-const verificationToken = signup.body?.data?.verificationToken;
-if (verificationToken) {
+// The code is only returned by development/test instances.
+const verificationCode = signup.body?.data?.verificationCode;
+if (verificationCode) {
   const verify = await api("POST", "/api/auth/verify-email", {
-    token: verificationToken,
+    email: candidateEmail,
+    code: verificationCode,
   });
-  assert(verify.status === 200, "the verification email link works", verify);
+  assert(verify.status === 200, "the verification code works", verify);
 }
 
 console.log("\n2. Duplicate Candidate ID is rejected explicitly");
@@ -286,9 +288,14 @@ const otherSignup = await api("POST", "/api/auth/signup", {
 assert(otherSignup.status === 201, "a second candidate can register", otherSignup);
 
 // Verify the other candidate's email if token is available
-const otherToken = otherSignup.body?.data?.verificationToken;
-if (otherToken) {
-  const otherVerify = await api("POST", "/api/auth/verify-email", { token: otherToken }, { auth: false });
+const otherCode = otherSignup.body?.data?.verificationCode;
+if (otherCode) {
+  const otherVerify = await api(
+    "POST",
+    "/api/auth/verify-email",
+    { email: otherSignup.body.data.email, code: otherCode },
+    { auth: false },
+  );
   assert(otherVerify.status === 200, "the second candidate can verify their email", otherVerify);
 }
 

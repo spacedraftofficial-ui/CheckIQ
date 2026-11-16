@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import { CheckCircle, XCircle, Mail, RefreshCw } from "lucide-react";
 import { request, ApiError } from "../lib/api";
 import { InlineError } from "../components/States";
@@ -7,6 +7,11 @@ import { AuthLayout } from "../components/Footer";
 
 export function VerifyEmailPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  // Signup passes the address in navigation state (never in the URL). The code
+  // is only valid together with the account's email, so it is sent with it.
+  const signupEmail = (location.state as { email?: string } | null)?.email ?? "";
+  const [email, setEmail] = useState(signupEmail);
   const [status, setStatus] = useState<"idle" | "verifying" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [code, setCode] = useState(["", "", "", "", "", ""]);
@@ -15,12 +20,19 @@ export function VerifyEmailPage() {
   const [resending, setResending] = useState(false);
 
   const handleCodeChange = (index: number, value: string) => {
-    if (value.length > 1) return;
+    const digits = value.replace(/D/g, "");
     const newCode = [...code];
-    newCode[index] = value;
+    if (digits.length > 1) {
+      // A pasted (or autofilled) code: spread it across the boxes.
+      for (let i = 0; i < digits.length && index + i < 6; i++) newCode[index + i] = digits[i]!;
+      setCode(newCode);
+      document.getElementById(`otp-digit-${Math.min(index + digits.length, 5)}`)?.focus();
+      return;
+    }
+    newCode[index] = digits;
     setCode(newCode);
 
-    if (value && index < 5) {
+    if (digits && index < 5) {
       const nextInput = document.getElementById(`otp-digit-${index + 1}`);
       nextInput?.focus();
     }
@@ -35,14 +47,14 @@ export function VerifyEmailPage() {
 
   const handleVerify = async () => {
     const otpCode = code.join("");
-    if (otpCode.length !== 6) return;
+    if (otpCode.length !== 6 || !email.trim()) return;
 
     setStatus("verifying");
     setError(null);
     try {
       await request("/auth/verify-email", {
         method: "POST",
-        body: { code: otpCode },
+        body: { email: email.trim(), code: otpCode },
         auth: false,
       });
       setStatus("success");
@@ -144,6 +156,21 @@ export function VerifyEmailPage() {
                     We sent a 6-digit code to the email address you provided during signup.
                   </p>
 
+                  <div className="mt-4 text-left">
+                    <label className="label" htmlFor="verify-email-address">
+                      Email address
+                    </label>
+                    <input
+                      id="verify-email-address"
+                      type="email"
+                      autoComplete="email"
+                      className="input w-full"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+
                   <form
                     className="mt-6"
                     onSubmit={(e) => {
@@ -158,7 +185,7 @@ export function VerifyEmailPage() {
                           id={`otp-digit-${index}`}
                           type="text"
                           inputMode="numeric"
-                          maxLength={1}
+                          maxLength={6}
                           className="h-12 w-12 rounded-xl border-2 border-ink-300 bg-white text-center text-xl font-semibold text-ink-900 transition-all focus:border-brand-500 focus:ring-2 focus:ring-brand-200 focus:outline-none"
                           value={digit}
                           onChange={(e) => handleCodeChange(index, e.target.value)}
@@ -171,7 +198,7 @@ export function VerifyEmailPage() {
                     <button
                       type="submit"
                       className="btn-primary mt-6 w-full"
-                      disabled={code.join("").length !== 6}
+                      disabled={code.join("").length !== 6 || !email.includes("@")}
                     >
                       Verify
                     </button>

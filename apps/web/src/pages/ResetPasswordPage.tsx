@@ -8,7 +8,10 @@ import { AuthLayout } from "../components/Footer";
 
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
-  const email = searchParams.get("email") ?? "";
+  const emailFromLink = searchParams.get("email") ?? "";
+  // The code only works together with the account's email address. It normally
+  // arrives from the forgot-password page; otherwise the user types it here.
+  const [email, setEmail] = useState(emailFromLink);
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -23,7 +26,7 @@ export function ResetPasswordPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await resetPassword(code, newPassword);
+      await resetPassword(email.trim(), code, newPassword);
       setReset(true);
     } catch (caught) {
       setError(
@@ -85,11 +88,33 @@ export function ResetPasswordPage() {
                 Reset your password
               </h1>
               <p className="mt-2 text-sm text-ink-600">
-                Enter the 6-digit code sent to <strong>{email}</strong>, then
-                choose a new password.
+                {emailFromLink ? (
+                  <>
+                    Enter the 6-digit code sent to <strong>{emailFromLink}</strong>, then choose a new
+                    password.
+                  </>
+                ) : (
+                  "Enter your email address and the 6-digit code we sent you, then choose a new password."
+                )}
               </p>
 
               <form className="mt-8 space-y-5" onSubmit={handleSubmit} noValidate>
+                {!emailFromLink && (
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-slate-800" htmlFor="reset-email">
+                      Email address
+                    </label>
+                    <input
+                      id="reset-email"
+                      type="email"
+                      autoComplete="email"
+                      className="block w-full rounded-xl border-0 bg-slate-50 px-3.5 py-3 text-sm text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      required
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="mb-1.5 block text-sm font-semibold text-slate-800" htmlFor="code">
                     Reset code
@@ -169,7 +194,7 @@ export function ResetPasswordPage() {
                 <button
                   type="submit"
                   className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-violet-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:from-blue-700 hover:to-violet-600 hover:shadow-xl hover:shadow-blue-500/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 disabled:shadow-none"
-                  disabled={submitting || code.length !== 6 || !passwordsMatch}
+                  disabled={submitting || code.length !== 6 || !passwordsMatch || !email.includes("@")}
                 >
                   {submitting ? "Resetting…" : "Reset password"}
                 </button>

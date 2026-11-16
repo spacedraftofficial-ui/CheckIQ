@@ -135,10 +135,11 @@ export const emailVerificationTokens = mysqlTable(
       .references(() => users.id, { onDelete: "cascade" }),
     tokenHash: varchar("token_hash", { length: 64 }).notNull(),
     expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
+    /** Wrong guesses against this code; the code is destroyed at the limit. */
+    failedAttempts: int("failed_attempts").notNull().default(0),
     createdAt: timestamp("created_at", { mode: "date", fsp: 3 }).notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("uq_email_verification_tokens_hash").on(t.tokenHash),
     index("ix_email_verification_tokens_user").on(t.userId),
   ],
 );
@@ -154,10 +155,11 @@ export const passwordResetTokens = mysqlTable(
     tokenHash: varchar("token_hash", { length: 64 }).notNull(),
     expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
     usedAt: timestamp("used_at", { mode: "date", fsp: 3 }),
+    /** Wrong guesses against this code; the code is destroyed at the limit. */
+    failedAttempts: int("failed_attempts").notNull().default(0),
     createdAt: timestamp("created_at", { mode: "date", fsp: 3 }).notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("uq_password_reset_tokens_hash").on(t.tokenHash),
     index("ix_password_reset_tokens_user").on(t.userId),
     index("ix_password_reset_tokens_expires").on(t.expiresAt),
   ],

@@ -105,7 +105,7 @@ export function SignupPage() {
       if (response?.verificationCode) {
         sessionStorage.setItem("dev_verify_otp", response.verificationCode);
       }
-      navigate("/verify-email", { replace: true });
+      navigate("/verify-email", { replace: true, state: { email: values.email } });
     } catch (error) {
       if (error instanceof ApiError && error.code === "CANDIDATE_ID_ALREADY_IN_USE") {
         setDuplicateMessage(error.message);

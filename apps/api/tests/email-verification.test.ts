@@ -132,7 +132,7 @@ describe("email verification", () => {
     const verify = await api({
       method: "post",
       path: "/api/auth/verify-email",
-      body: { code: code as string },
+      body: { email, code: code as string },
       auth: false,
     });
 
@@ -144,7 +144,7 @@ describe("email verification", () => {
     const response = await api({
       method: "post",
       path: "/api/auth/verify-email",
-      body: { code: "000000" },
+      body: { email: "nobody@example.test", code: "000000" },
       auth: false,
     });
 
@@ -156,7 +156,7 @@ describe("email verification", () => {
     const response = await api({
       method: "post",
       path: "/api/auth/verify-email",
-      body: { code: "abc" },
+      body: { email: "nobody@example.test", code: "abc" },
       auth: false,
     });
 

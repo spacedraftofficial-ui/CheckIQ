@@ -168,8 +168,12 @@ export async function forgotPassword(email: string): Promise<{ sent: boolean; me
   return request("/auth/forgot-password", { body: { email }, auth: false });
 }
 
-export async function resetPassword(code: string, newPassword: string): Promise<{ reset: boolean }> {
-  return request("/auth/reset-password", { body: { code, newPassword }, auth: false });
+export async function resetPassword(
+  email: string,
+  code: string,
+  newPassword: string,
+): Promise<{ reset: boolean }> {
+  return request("/auth/reset-password", { body: { email, code, newPassword }, auth: false });
 }
 
 /** Administratively disables or re-enables a case. */

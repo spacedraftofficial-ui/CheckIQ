@@ -119,8 +119,14 @@ export function getConfig(): AppConfig {
       "[warn] COOKIE_SECURE is not set to true in production. For HTTPS deployments, set COOKIE_SECURE=true.",
     );
   }
-  if (cached.NODE_ENV === "production" && !cached.EMAIL_ENABLED) {
-    // Not fatal: in-app notifications still work. Surfaced in the startup log.
+  if (cached.NODE_ENV === "production") {
+    // Not fatal (in-app notifications still work), but without email new
+    // candidates never receive their verification code and cannot sign in.
+    if (!cached.EMAIL_ENABLED) {
+      console.warn("[warn] EMAIL_ENABLED is false: verification and password reset codes will NOT be emailed.");
+    } else if (!cached.RESEND_API_KEY && !cached.SMTP_HOST) {
+      console.warn("[warn] EMAIL_ENABLED is true but neither RESEND_API_KEY nor SMTP_HOST is set: no email can be sent.");
+    }
   }
   return cached;
 }

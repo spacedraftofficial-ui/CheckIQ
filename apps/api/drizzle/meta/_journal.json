@@ -57,6 +57,13 @@
       "when": 1793350000000,
       "tag": "0008_disabled_cases",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1794800000000,
+      "tag": "0009_otp_hardening",
+      "breakpoints": true
     }
   ]
 }

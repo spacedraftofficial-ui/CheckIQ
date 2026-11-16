@@ -72,7 +72,9 @@ export type ForgotPasswordRequest = z.infer<typeof forgotPasswordRequestSchema>;
  * verified against a password_reset_tokens row that is then consumed.
  */
 export const resetPasswordRequestSchema = z.object({
-  code: z.string().length(6, { error: "Enter the 6-digit reset code" }),
+  // The code is only valid for this account; it is never looked up on its own.
+  email: z.email({ error: "Enter the email address the code was sent to" }),
+  code: z.string().regex(/^\d{6}$/, { error: "Enter the 6-digit reset code" }),
   newPassword: passwordSchema,
 });
 export type ResetPasswordRequest = z.infer<typeof resetPasswordRequestSchema>;
