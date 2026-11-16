@@ -11,6 +11,9 @@ const booleanFromString = z
   .union([z.boolean(), z.enum(["true", "false"])])
   .transform((value) => (typeof value === "boolean" ? value : value === "true"));
 
+/** Public, committed default. Never acceptable for a production administrator. */
+export const DEFAULT_SEED_ADMIN_PASSWORD = "ChangeMe!2026";
+
 const csv = z
   .string()
   .optional()
@@ -28,7 +31,8 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(4000),
   HOST: z.string().default("127.0.0.1"),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
-  TRUST_PROXY: booleanFromString.default(false),
+  /** Unset = decide automatically (see trustProxyEnabled). */
+  TRUST_PROXY: booleanFromString.optional(),
 
   DATABASE_URL: z.string().min(1, { error: "DATABASE_URL is required" }),
   DATABASE_POOL_SIZE: z.coerce.number().int().min(1).max(50).default(10),
@@ -68,12 +72,37 @@ const envSchema = z.object({
   SIGNUP_RATE_LIMIT_MAX_ATTEMPTS: z.coerce.number().int().min(1).default(5),
 
   SEED_ADMIN_EMAIL: z.string().default("admin@checkiq.local"),
-  SEED_ADMIN_PASSWORD: z.string().default("ChangeMe!2026"),
+  SEED_ADMIN_PASSWORD: z.string().default(DEFAULT_SEED_ADMIN_PASSWORD),
   SEED_ADMIN_NAME: z.string().default("System Administrator"),
   EMAIL_VERIFICATION_TTL_MINUTES: z.coerce.number().int().min(1).max(1440).default(1440),
 });
 
 export type AppConfig = z.infer<typeof envSchema>;
+
+/**
+ * Whether Express should trust one reverse-proxy hop for the client address.
+ *
+ * Hostinger runs the app behind its proxy; without trusting it every visitor
+ * shares the proxy's address and therefore one rate-limit bucket, so a few
+ * signups by anyone would lock out everyone. An explicit TRUST_PROXY wins;
+ * when it is unset, the proxy is trusted on Hostinger only (elsewhere,
+ * trusting a proxy that is not there would let clients spoof their address).
+ */
+export function trustProxyEnabled(
+  configured: boolean | undefined,
+  hostingerSourceDir: string | undefined,
+): boolean {
+  return configured ?? Boolean(hostingerSourceDir);
+}
+
+/**
+ * The seeded administrator is created with SEED_ADMIN_PASSWORD. In production
+ * that must not be the committed default: whoever signs in first with it would
+ * own a Super Administrator account.
+ */
+export function seedAdminPasswordAllowed(nodeEnv: string, password: string): boolean {
+  return nodeEnv !== "production" || (password !== DEFAULT_SEED_ADMIN_PASSWORD && password.length >= 12);
+}
 
 function loadEnvFile(): void {
   // Node's built-in .env loader. No third-party dotenv dependency.

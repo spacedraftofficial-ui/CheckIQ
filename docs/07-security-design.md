@@ -14,7 +14,8 @@ policy decision for the organisation.
 | Token storage | The refresh token is an `httpOnly`, `SameSite=Lax`, `Secure`-in-production cookie scoped to `/api/auth`. The access token is held **in memory only** by the web client — never in `localStorage` or `sessionStorage`. |
 | Refresh rotation | Every refresh rotates the token. Re-use of a rotated token revokes the whole token family and is audited as `AUTH_LOGOUT` with the reason "Refresh token reuse detected". |
 | Session invalidation | `users.session_epoch` is incremented on password change and on account deactivation. The access-token middleware compares the epoch on every request, so deactivation takes effect immediately. |
-| Account recovery | Out of scope for the MVP. `SEED_ADMIN_PASSWORD` and the seed account exist only for development. A production deployment must disable the seed and provide a recovery flow. |
+| Account recovery | Candidates and staff reset their own password by emailed code; administrators can issue a temporary password. The seed administrator is never created in production with the committed default `SEED_ADMIN_PASSWORD` (or one under 12 characters); an existing seed administrator still holding the default is re-keyed at boot (to a private `SEED_ADMIN_PASSWORD`, or locked with a random one) and signed out. |
+| Client address | Rate limits key on the client IP. Behind Hostinger's reverse proxy one hop is trusted automatically (`TRUST_PROXY` unset + `HOSTINGER_SOURCE_DIR` present); elsewhere it is off unless `TRUST_PROXY=true`. |
 | OTP | Email verification and password reset use 6-digit codes: `crypto.randomInt`, SHA-256 at rest, single-use, expiring, rate limited per IP, bound to the account's email, and destroyed after 5 wrong attempts. See `apps/api/src/modules/auth/otp.ts`. OTP *login* is not implemented (decision D-17). |
 
 ### Why possession of a Candidate ID is not authentication

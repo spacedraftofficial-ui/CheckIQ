@@ -2,7 +2,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import express, { type Express } from "express";
 import helmet from "helmet";
-import { getConfig } from "./config.js";
+import { getConfig, trustProxyEnabled } from "./config.js";
 import { getDatabase } from "./db/client.js";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler.js";
 import { authenticate } from "./middleware/authenticate.js";
@@ -35,7 +35,7 @@ export function createApp(): Express {
   const config = getConfig();
   const app = express();
 
-  if (config.TRUST_PROXY) app.set("trust proxy", 1);
+  if (trustProxyEnabled(config.TRUST_PROXY, process.env.HOSTINGER_SOURCE_DIR)) app.set("trust proxy", 1);
   app.disable("x-powered-by");
 
   app.use(

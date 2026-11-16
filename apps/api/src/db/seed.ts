@@ -1,7 +1,8 @@
-import { hash } from "@node-rs/argon2";
+import { hash, verify } from "@node-rs/argon2";
+import { randomBytes } from "node:crypto";
 import { PERMISSIONS } from "@checkiq/contracts";
 import { eq, inArray, sql } from "drizzle-orm";
-import { getConfig } from "../config.js";
+import { DEFAULT_SEED_ADMIN_PASSWORD, getConfig, seedAdminPasswordAllowed } from "../config.js";
 import { schema } from "./client.js";
 import type { Db } from "./types.js";
 import { getLogger } from "../lib/logger.js";
@@ -368,7 +369,12 @@ export async function runSeed(db: Db): Promise<void> {
     .where(eq(schema.users.emailNormalized, config.SEED_ADMIN_EMAIL.toLowerCase()))
     .limit(1);
 
-  if (!existingAdmin) {
+  if (!existingAdmin && !seedAdminPasswordAllowed(config.NODE_ENV, config.SEED_ADMIN_PASSWORD)) {
+    logger.warn(
+      { email: config.SEED_ADMIN_EMAIL },
+      "Seed administrator NOT created: in production SEED_ADMIN_PASSWORD must be set to a private value of at least 12 characters (not the default).",
+    );
+  } else if (!existingAdmin) {
     const adminId = uuid();
     const passwordHash = await hash(config.SEED_ADMIN_PASSWORD, {
       memoryCost: 19456,
@@ -392,6 +398,31 @@ export async function runSeed(db: Db): Promise<void> {
     logger.info(
       { email: config.SEED_ADMIN_EMAIL },
       "Development administrator created — change the password before any shared use",
+    );
+  } else if (
+    config.NODE_ENV === "production" &&
+    (await verify(existingAdmin.passwordHash, DEFAULT_SEED_ADMIN_PASSWORD).catch(() => false))
+  ) {
+    // An administrator created by an earlier release still has the public
+    // default password. Replace it — with SEED_ADMIN_PASSWORD when that is a
+    // private value, otherwise with an unusable random one — and sign out any
+    // session that may already have used it.
+    const replacement = seedAdminPasswordAllowed(config.NODE_ENV, config.SEED_ADMIN_PASSWORD)
+      ? config.SEED_ADMIN_PASSWORD
+      : randomBytes(32).toString("base64url");
+    await db
+      .update(schema.users)
+      .set({
+        passwordHash: await hash(replacement, { memoryCost: 19456, timeCost: 2, parallelism: 1 }),
+        mustChangePassword: true,
+        sessionEpoch: sql`${schema.users.sessionEpoch} + 1`,
+      })
+      .where(eq(schema.users.id, existingAdmin.id));
+    logger.warn(
+      { email: config.SEED_ADMIN_EMAIL },
+      replacement === config.SEED_ADMIN_PASSWORD
+        ? "Seed administrator still had the default password; replaced with SEED_ADMIN_PASSWORD."
+        : "Seed administrator still had the default password; it has been locked. Set SEED_ADMIN_PASSWORD (12+ chars) and restart to regain access.",
     );
   } else {
     logger.info({ email: config.SEED_ADMIN_EMAIL }, "Development administrator already exists");
