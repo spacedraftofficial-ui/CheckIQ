@@ -50,6 +50,16 @@ export const createStaffUserSchema = z.object({
 });
 export type CreateStaffUserRequest = z.infer<typeof createStaffUserSchema>;
 
+/**
+ * Permanent (hard) deletion. The caller must retype the user's email address,
+ * so a mis-click cannot erase the wrong account.
+ */
+export const permanentDeleteUserSchema = z.object({
+  confirmEmail: z.string().trim().min(1, { error: "Type the user's email address to confirm" }),
+  reason: z.string().trim().max(1000).optional(),
+});
+export type PermanentDeleteUserRequest = z.infer<typeof permanentDeleteUserSchema>;
+
 export const updateStaffUserSchema = z.object({
   fullName: z.string().trim().min(2).max(160).optional(),
   isActive: z.boolean().optional(),

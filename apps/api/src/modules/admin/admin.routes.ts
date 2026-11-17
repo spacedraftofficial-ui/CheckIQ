@@ -21,7 +21,10 @@ import { newId } from "../../lib/ids.js";
 import { recordAudit } from "../../services/audit.service.js";
 import { queueNotification } from "../../services/notification.service.js";
 import { clearConfigCache } from "../../services/config.service.js";
-import { TERMINAL_CASE_STATUSES, USER_ROLES } from "@checkiq/contracts";
+import { TERMINAL_CASE_STATUSES, USER_ROLES, permanentDeleteUserSchema } from "@checkiq/contracts";
+import { rm } from "node:fs/promises";
+import { getLogger } from "../../lib/logger.js";
+import { resolveStoragePath } from "../../lib/storage.js";
 import type { Principal } from "../../types/express.js";
 
 export const adminRouter = Router();
@@ -702,6 +705,150 @@ adminRouter.delete(
     });
 
     res.status(200).json({ data: { id: user.id, deleted: true } });
+  },
+);
+
+/** MySQL "Cannot delete or update a parent row: a foreign key constraint fails". */
+function isForeignKeyBlock(error: unknown): boolean {
+  for (let current: unknown = error; current; current = (current as { cause?: unknown }).cause) {
+    if ((current as { errno?: number }).errno === 1451) return true;
+  }
+  return false;
+}
+
+/**
+ * DELETE /api/admin/users/:id/permanent
+ *
+ * Permanently erases a user. Super Administrator only (`role:manage`), and the
+ * caller must retype the user's email address.
+ *
+ * For a candidate this removes the account, profile, case(s), documents and
+ * stored files. Audit events are kept (append-only); the deletion itself is
+ * recorded. Staff whose work other cases depend on (verification results,
+ * approvals, reviews, clarifications) cannot be erased — the database refuses
+ * and the caller is told to disable the account instead. Same for staff still
+ * assigned to an open case.
+ */
+adminRouter.delete(
+  "/admin/users/:id/permanent",
+  requirePrincipal,
+  requirePermission("role:manage"),
+  validate({ params: idParam, body: permanentDeleteUserSchema }),
+  async (req, res) => {
+    const { db } = getDatabase();
+    const userId = param(req, "id");
+    const payload = body<z.infer<typeof permanentDeleteUserSchema>>(req);
+
+    if (userId === req.principal!.userId) {
+      throw forbidden("You cannot permanently delete your own account");
+    }
+
+    const [user] = await db
+      .select({ id: schema.users.id, email: schema.users.email, fullName: schema.users.fullName })
+      .from(schema.users)
+      .where(eq(schema.users.id, userId))
+      .limit(1);
+    if (!user) throw notFound("User not found");
+
+    if (payload.confirmEmail.toLowerCase() !== user.email.trim().toLowerCase()) {
+      throw validationError("The email address you typed does not match this user");
+    }
+
+    const [openAssignment] = await db
+      .select({ id: schema.bgvCases.id })
+      .from(schema.bgvCases)
+      .where(
+        and(
+          or(eq(schema.bgvCases.assignedVerifierId, userId), eq(schema.bgvCases.assignedReviewerId, userId)),
+          notInArray(schema.bgvCases.status, [...TERMINAL_CASE_STATUSES]),
+        ),
+      )
+      .limit(1);
+    if (openAssignment) {
+      throw conflict("This user is assigned to open cases. Reassign them before deleting.");
+    }
+
+    const roles = await activeRolesOf(userId);
+    const [profile] = await db
+      .select({ id: schema.candidateProfiles.id, candidateId: schema.candidateProfiles.candidateId })
+      .from(schema.candidateProfiles)
+      .where(eq(schema.candidateProfiles.userId, userId))
+      .limit(1);
+
+    // Storage keys of every file that belongs to the candidate's cases, so the
+    // files can be removed once the database rows are gone.
+    const caseRows = profile
+      ? await db
+          .select({ id: schema.bgvCases.id })
+          .from(schema.bgvCases)
+          .where(eq(schema.bgvCases.profileId, profile.id))
+      : [];
+    const caseIds = caseRows.map((row) => row.id);
+    const storageKeys =
+      caseIds.length === 0
+        ? []
+        : (
+            await db
+              .select({ key: schema.documentVersions.storageKey })
+              .from(schema.documentVersions)
+              .innerJoin(schema.documents, eq(schema.documents.id, schema.documentVersions.documentId))
+              .where(inArray(schema.documents.caseId, caseIds))
+          ).map((row) => row.key);
+
+    try {
+      await db.transaction(async (tx) => {
+        if (caseIds.length > 0) {
+          // Cascades to documents, versions, checks, results, clarifications,
+          // submissions, reviews, approvals, scores, history and notifications.
+          await tx.delete(schema.bgvCases).where(inArray(schema.bgvCases.id, caseIds));
+        }
+        if (profile) {
+          await tx.delete(schema.consentAcceptances).where(eq(schema.consentAcceptances.profileId, profile.id));
+        }
+        // Cascades to the profile, roles, sessions, tokens and notifications;
+        // audit events keep their text and lose only the actor link.
+        await tx.delete(schema.users).where(eq(schema.users.id, userId));
+
+        await recordAudit(
+          {
+            action: "USER_PERMANENTLY_DELETED",
+            actorId: req.principal!.userId,
+            actorName: req.principal!.fullName,
+            actorRole: req.principal!.roles[0] ?? null,
+            entityType: "user",
+            entityId: userId,
+            candidateId: profile?.candidateId ?? null,
+            previousValue: { email: user.email, fullName: user.fullName, roles, cases: caseIds.length },
+            reason: payload.reason ?? "Permanently deleted by a Super Administrator",
+            ipAddress: req.ipAddress ?? null,
+            userAgent: req.userAgent ?? null,
+            requestId: req.requestId,
+          },
+          tx,
+        );
+      });
+    } catch (error) {
+      if (isForeignKeyBlock(error)) {
+        throw conflict(
+          "This user has work history other cases depend on (verification results, reviews, approvals or clarifications). Disable or delete the account instead of erasing it.",
+        );
+      }
+      throw error;
+    }
+
+    // Files last: if the database step failed nothing is lost. A file that
+    // cannot be removed is logged, not fatal — the row pointing to it is gone.
+    let filesRemoved = 0;
+    for (const key of storageKeys) {
+      try {
+        await rm(resolveStoragePath(key), { force: true });
+        filesRemoved++;
+      } catch (error) {
+        getLogger().warn({ err: error }, "Could not remove a stored document file during permanent deletion");
+      }
+    }
+
+    res.status(200).json({ data: { id: userId, permanentlyDeleted: true, filesRemoved } });
   },
 );
 

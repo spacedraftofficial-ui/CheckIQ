@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2, ArrowLeft, Mail, ShieldCheck, ToggleLeft, ToggleRight, KeyRound } from "lucide-react";
 import { ApiError, request } from "../../lib/api";
@@ -67,6 +67,8 @@ export function UserDetailPage() {
   const { user: currentUser } = useAuth();
   const isSuperAdmin = Boolean(currentUser?.roles.includes("SUPER_ADMINISTRATOR"));
   const [resetResult, setResetResult] = useState<{ temporaryPassword: string } | null>(null);
+  const [showPermanentDelete, setShowPermanentDelete] = useState(false);
+  const navigate = useNavigate();
 
   const user = useQuery({
     queryKey: ["admin", "user", id],
@@ -223,8 +225,31 @@ export function UserDetailPage() {
                 {resetPassword.isPending ? "Resetting…" : "Reset password"}
               </button>
             )}
+            {isSuperAdmin && !isSelf && (
+              <button
+                type="button"
+                className="btn-danger"
+                onClick={() => setShowPermanentDelete(true)}
+              >
+                <Trash2 className="h-4 w-4" aria-hidden={true} />
+                Delete permanently
+              </button>
+            )}
          </div>
       </header>
+
+      {showPermanentDelete ? (
+        <PermanentDeleteDialog
+          userId={data.id}
+          email={data.email}
+          fullName={data.fullName}
+          onClose={() => setShowPermanentDelete(false)}
+          onDeleted={async () => {
+            await queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+            navigate(backTo, { replace: true });
+          }}
+        />
+      ) : null}
 
       {resetPassword.isError && resetPassword.error instanceof ApiError ? (
         <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">
@@ -463,6 +488,102 @@ function Detail({ label, value }: { label: string; value: string }) {
     <div className="card p-4">
       <p className="text-xs font-medium uppercase tracking-wide text-ink-500">{label}</p>
       <p className="mt-1 text-sm font-semibold text-ink-900 break-words">{value}</p>
+    </div>
+  );
+}
+
+/**
+ * Confirmation for permanent deletion. The admin must retype the user's email
+ * address; the server checks it again.
+ */
+function PermanentDeleteDialog({
+  userId,
+  email,
+  fullName,
+  onClose,
+  onDeleted,
+}: {
+  userId: string;
+  email: string;
+  fullName: string;
+  onClose: () => void;
+  onDeleted: () => Promise<void>;
+}) {
+  const [typed, setTyped] = useState("");
+  const [reason, setReason] = useState("");
+  const remove = useMutation({
+    mutationFn: () =>
+      request<{ permanentlyDeleted: boolean; filesRemoved: number }>(`/admin/users/${userId}/permanent`, {
+        method: "DELETE",
+        body: { confirmEmail: typed.trim(), reason: reason.trim() || undefined },
+      }),
+    onSuccess: async () => {
+      await onDeleted();
+    },
+  });
+  const matches = typed.trim().toLowerCase() === email.trim().toLowerCase();
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="permanent-delete-title"
+    >
+      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+        <h2 id="permanent-delete-title" className="text-lg font-semibold text-red-700">
+          Permanently delete {fullName}?
+        </h2>
+        <p className="mt-2 text-sm text-ink-700">
+          This erases the account, profile, case and every uploaded document and file.
+          <strong> It cannot be undone.</strong> The audit log keeps a record of the deletion.
+        </p>
+        <p className="mt-2 text-sm text-ink-600">
+          Staff who recorded verification work on other cases cannot be erased; disable them instead.
+        </p>
+
+        <label className="label mt-4" htmlFor="confirm-delete-email">
+          Type <span className="font-mono">{email}</span> to confirm
+        </label>
+        <input
+          id="confirm-delete-email"
+          className="input w-full"
+          autoComplete="off"
+          value={typed}
+          onChange={(event) => setTyped(event.target.value)}
+        />
+
+        <label className="label mt-3" htmlFor="confirm-delete-reason">
+          Reason (optional)
+        </label>
+        <input
+          id="confirm-delete-reason"
+          className="input w-full"
+          value={reason}
+          maxLength={1000}
+          onChange={(event) => setReason(event.target.value)}
+        />
+
+        {remove.isError ? (
+          <InlineError
+            message={remove.error instanceof ApiError ? remove.error.message : "The user could not be deleted."}
+          />
+        ) : null}
+
+        <div className="mt-6 flex justify-end gap-2">
+          <button type="button" className="btn-secondary" disabled={remove.isPending} onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="btn-danger"
+            disabled={!matches || remove.isPending}
+            onClick={() => remove.mutate()}
+          >
+            {remove.isPending ? "Deleting…" : "Delete permanently"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
