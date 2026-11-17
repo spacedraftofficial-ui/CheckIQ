@@ -4,12 +4,40 @@ import { hash } from "@node-rs/argon2";
 import {
   DEFAULT_SEED_ADMIN_PASSWORD,
   getConfig,
+  parseEnvironment,
   seedAdminPasswordAllowed,
   trustProxyEnabled,
 } from "../src/config.js";
 import { getDatabase, schema } from "../src/db/client.js";
 import { runSeed } from "../src/db/seed.js";
 import { api } from "./helpers.js";
+
+describe("environment settings typed into a hosting panel", () => {
+  const base = {
+    DATABASE_URL: "mysql://u:p@127.0.0.1:3306/db",
+    JWT_ACCESS_SECRET: "a".repeat(40),
+    PII_ENCRYPTION_KEY: "b".repeat(40),
+  };
+
+  it.each(["true", "True", "TRUE", " yes ", "1", "on"])("reads %j as on", (value) => {
+    expect(parseEnvironment({ ...base, SEED_ADMIN_RESET_PASSWORD: value }).SEED_ADMIN_RESET_PASSWORD).toBe(true);
+  });
+
+  it.each(["false", "False", "no", "0", "off"])("reads %j as off", (value) => {
+    expect(parseEnvironment({ ...base, EMAIL_ENABLED: value }).EMAIL_ENABLED).toBe(false);
+  });
+
+  it("treats empty values as not set instead of refusing to start", () => {
+    const config = parseEnvironment({ ...base, SMTP_PORT: "", TRUST_PROXY: "  ", SEED_ADMIN_RESET_PASSWORD: "" });
+    expect(config.SMTP_PORT).toBe(587);
+    expect(config.TRUST_PROXY).toBeUndefined();
+    expect(config.SEED_ADMIN_RESET_PASSWORD).toBe(false);
+  });
+
+  it("names the variable when a value is genuinely invalid", () => {
+    expect(() => parseEnvironment({ ...base, COOKIE_SECURE: "maybe" })).toThrow(/COOKIE_SECURE/);
+  });
+});
 
 describe("seed administrator break-glass reset", () => {
   it("restores access to a locked seed administrator when the switch is on", async () => {

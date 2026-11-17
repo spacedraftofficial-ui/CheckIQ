@@ -7,9 +7,24 @@ import { z } from "zod";
  * never committed, never logged and never returned through the API.
  */
 
-const booleanFromString = z
-  .union([z.boolean(), z.enum(["true", "false"])])
-  .transform((value) => (typeof value === "boolean" ? value : value === "true"));
+const TRUE_WORDS = new Set(["true", "1", "yes", "y", "on"]);
+const FALSE_WORDS = new Set(["false", "0", "no", "n", "off"]);
+
+/**
+ * On/off settings typed into a hosting panel come in every spelling. Accept
+ * true/false, 1/0, yes/no and on/off in any case; a typo still fails with a
+ * clear message naming the variable, instead of silently picking a value.
+ */
+const booleanFromString = z.preprocess(
+  (value) => {
+    if (typeof value !== "string") return value;
+    const word = value.trim().toLowerCase();
+    if (TRUE_WORDS.has(word)) return true;
+    if (FALSE_WORDS.has(word)) return false;
+    return value;
+  },
+  z.boolean({ error: "Use true or false" }),
+);
 
 /** Public, committed default. Never acceptable for a production administrator. */
 export const DEFAULT_SEED_ADMIN_PASSWORD = "ChangeMe!2026";
@@ -132,17 +147,30 @@ function loadEnvFile(): void {
 
 let cached: AppConfig | undefined;
 
-export function getConfig(): AppConfig {
-  if (cached) return cached;
-  loadEnvFile();
-  const parsed = envSchema.safeParse(process.env);
+/**
+ * Validates raw environment variables. Throws one error listing every bad
+ * variable by name, so a hosting-panel typo is obvious in the start-up log.
+ */
+export function parseEnvironment(raw: NodeJS.ProcessEnv): AppConfig {
+  // A variable left empty in the hosting panel means "not set": use the
+  // default instead of failing (an empty number or switch used to stop startup).
+  const environment = Object.fromEntries(
+    Object.entries(raw).filter(([, value]) => value === undefined || value.trim() !== ""),
+  );
+  const parsed = envSchema.safeParse(environment);
   if (!parsed.success) {
     const issues = parsed.error.issues
       .map((i) => `  - ${i.path.join(".") || "(root)"}: ${i.message}`)
       .join("\n");
     throw new Error(`Invalid environment configuration:\n${issues}`);
   }
-  cached = parsed.data;
+  return parsed.data;
+}
+
+export function getConfig(): AppConfig {
+  if (cached) return cached;
+  loadEnvFile();
+  cached = parseEnvironment(process.env);
   if (cached.NODE_ENV === "production" && !cached.COOKIE_SECURE) {
     // Log a warning but don't block startup. Hostinger single-site deployments
     // may not have HTTPS configured, so COOKIE_SECURE=false is sometimes valid.
