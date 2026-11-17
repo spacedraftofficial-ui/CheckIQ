@@ -200,17 +200,12 @@ export function DocumentsPage() {
     if (queue.length === 0) return;
     setPageError(null);
     setBatch({ done: 0, total: queue.length });
-    let succeeded = 0;
     for (const [index, doc] of queue.entries()) {
-      if (await uploadOne(doc)) succeeded++;
+      await uploadOne(doc);
       setBatch({ done: index + 1, total: queue.length });
     }
     setBatch(null);
-    if (succeeded < queue.length) {
-      setPageError(
-        `${queue.length - succeeded} of ${queue.length} file(s) could not be uploaded. See the message on each card, then try again.`,
-      );
-    }
+    // Failures are listed by document name in the summary at the top.
     await refreshAfterUpload();
   };
 
@@ -229,6 +224,17 @@ export function DocumentsPage() {
   }
 
   if (!documents.data) return <LoadingBlock label="Loading documents" />;
+
+  // Every card with a problem, in page order, so the summary can name them.
+  const erroredDocuments = documents.data.filter((doc) => cardErrors[doc.id]);
+
+  const scrollToCard = (documentId: string) => {
+    const card = window.document.getElementById("doc-card-" + documentId);
+    // An instant jump: smooth scrolling is cancelled by the focus below in some
+    // browsers and does not run at all in others, which left the user stranded.
+    card?.scrollIntoView({ block: "center" });
+    card?.querySelector<HTMLInputElement>("input[type=file]")?.focus({ preventScroll: true });
+  };
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -258,6 +264,35 @@ export function DocumentsPage() {
           <div className="flex items-start gap-3">
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" aria-hidden="true" />
             <span>{pageError}</span>
+          </div>
+        </div>
+      ) : null}
+
+      {erroredDocuments.length > 0 ? (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800" role="alert">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">
+                {erroredDocuments.length === 1
+                  ? "1 document needs your attention"
+                  : `${erroredDocuments.length} documents need your attention`}
+              </p>
+              <ul className="mt-2 space-y-1.5">
+                {erroredDocuments.map((doc) => (
+                  <li key={doc.id} className="flex flex-wrap items-baseline gap-x-2">
+                    <button
+                      type="button"
+                      className="font-semibold text-rose-900 underline underline-offset-2 hover:text-rose-700"
+                      onClick={() => scrollToCard(doc.id)}
+                    >
+                      {doc.label}
+                    </button>
+                    <span className="text-rose-700">{cardErrors[doc.id]}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
       ) : null}
@@ -312,7 +347,10 @@ export function DocumentsPage() {
             return (
               <li
                 key={document.id}
-                className={`flex min-w-0 flex-col overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-xl ${accent.hover}`}
+                id={"doc-card-" + document.id}
+                className={`flex min-w-0 flex-col overflow-hidden rounded-3xl bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-xl ${accent.hover} ${
+                  cardError ? "ring-2 ring-rose-400" : "ring-1 ring-slate-200"
+                }`}
               >
                 <div className={`h-1.5 bg-gradient-to-r ${accent.bar}`} aria-hidden="true" />
                 <div className="flex flex-1 flex-col p-5 sm:p-6">
@@ -419,7 +457,7 @@ export function DocumentsPage() {
                           if (file.size > MAX_SIZE_BYTES) {
                             setCardError(
                               document.id,
-                              `This file is ${formatBytes(file.size)}; the limit is 3 MB. Please choose a smaller file.`,
+                              `"${file.name}" is ${formatBytes(file.size)}; the limit is 3 MB. Please choose a smaller file.`,
                             );
                             return;
                           }
