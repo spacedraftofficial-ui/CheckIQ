@@ -399,6 +399,37 @@ export async function runSeed(db: Db): Promise<void> {
       { email: config.SEED_ADMIN_EMAIL },
       "Development administrator created — change the password before any shared use",
     );
+  } else if (config.SEED_ADMIN_RESET_PASSWORD) {
+    // Break-glass recovery, switched on deliberately in the hosting settings:
+    // set SEED_ADMIN_PASSWORD on the seed administrator, unlock and re-enable
+    // it, and make sure it still holds Super Administrator. Runs on every
+    // start while the switch is on, so the log tells the operator to remove it.
+    if (!seedAdminPasswordAllowed("production", config.SEED_ADMIN_PASSWORD)) {
+      logger.warn(
+        { email: config.SEED_ADMIN_EMAIL },
+        "SEED_ADMIN_RESET_PASSWORD is on but SEED_ADMIN_PASSWORD is the default or under 12 characters; nothing was reset.",
+      );
+    } else {
+      await db
+        .update(schema.users)
+        .set({
+          passwordHash: await hash(config.SEED_ADMIN_PASSWORD, { memoryCost: 19456, timeCost: 2, parallelism: 1 }),
+          mustChangePassword: true,
+          isActive: true,
+          failedLoginAttempts: 0,
+          lockedUntil: null,
+          sessionEpoch: sql`${schema.users.sessionEpoch} + 1`,
+        })
+        .where(eq(schema.users.id, existingAdmin.id));
+      await db
+        .insert(schema.userRoles)
+        .values({ userId: existingAdmin.id, roleCode: "SUPER_ADMINISTRATOR" })
+        .onDuplicateKeyUpdate({ set: { revokedAt: null } });
+      logger.warn(
+        { email: config.SEED_ADMIN_EMAIL },
+        "Seed administrator password was reset from SEED_ADMIN_PASSWORD. Sign in, change it, then REMOVE SEED_ADMIN_RESET_PASSWORD — while it is on, every restart resets the password again.",
+      );
+    }
   } else if (
     config.NODE_ENV === "production" &&
     (await verify(existingAdmin.passwordHash, DEFAULT_SEED_ADMIN_PASSWORD).catch(() => false))
@@ -422,7 +453,7 @@ export async function runSeed(db: Db): Promise<void> {
       { email: config.SEED_ADMIN_EMAIL },
       replacement === config.SEED_ADMIN_PASSWORD
         ? "Seed administrator still had the default password; replaced with SEED_ADMIN_PASSWORD."
-        : "Seed administrator still had the default password; it has been locked. Set SEED_ADMIN_PASSWORD (12+ chars) and restart to regain access.",
+        : "Seed administrator still had the default password; it has been locked. To regain access set SEED_ADMIN_PASSWORD (12+ chars) and SEED_ADMIN_RESET_PASSWORD=true, restart, then remove SEED_ADMIN_RESET_PASSWORD.",
     );
   } else {
     logger.info({ email: config.SEED_ADMIN_EMAIL }, "Development administrator already exists");
