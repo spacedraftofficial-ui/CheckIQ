@@ -4,6 +4,7 @@ import { CheckCircle, XCircle, Mail, RefreshCw } from "lucide-react";
 import { request, ApiError } from "../lib/api";
 import { InlineError } from "../components/States";
 import { AuthLayout } from "../components/Footer";
+import { BrandLockup } from "../components/Brand";
 
 export function VerifyEmailPage() {
   const navigate = useNavigate();
@@ -111,7 +112,7 @@ export function VerifyEmailPage() {
           <div className="surface-solid animate-fade-in-up">
             <div className="p-6 sm:p-8">
             <div className="mb-6 flex justify-center">
-              <img src="/logos/checkiq-icon.png" className="h-12 w-12" alt="CheckIQ" aria-hidden="true" />
+              <BrandLockup showTagline />
             </div>
 
             <div className="text-center">

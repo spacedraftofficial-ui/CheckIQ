@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, FileCheck2, Hash, Lock, ShieldCheck } from "lucide-react";
 import { AuthLayout } from "../components/Footer";
+import { BrandLockup } from "../components/Brand";
 
 /**
  * The landing screen.
@@ -37,10 +38,7 @@ export function LandingPage() {
           <div className="grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-16">
             {/* Intro */}
             <div>
-              <div className="flex items-center gap-3">
-              <img src="/logos/checkiq-icon.png" className="h-11 w-11 shrink-0" alt="CheckIQ" aria-hidden="true" />
-              <span className="text-xl font-extrabold tracking-tight text-slate-900">CheckIQ</span>
-            </div>
+              <BrandLockup showTagline />
 
               <span className="mt-8 inline-flex items-center rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-blue-700 shadow-sm ring-1 ring-inset ring-blue-100">
                 Candidate verification portal

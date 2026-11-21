@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { Wordmark } from "./Brand";
 import { Bell, FileCheck2, LayoutDashboard, LogOut, Lock, Menu, ShieldCheck, Users, Settings, X } from "lucide-react";
 import { useAuth } from "../lib/auth-context";
 import { request } from "../lib/api";
@@ -129,7 +130,7 @@ export function Layout() {
               aria-hidden="true"
             />
             <div className="leading-tight">
-              <p className="text-lg font-extrabold tracking-tight text-slate-900">CheckIQ</p>
+              <Wordmark className="block text-lg" />
               <p className="text-xs text-slate-500">{isStaff ? "Operations console" : "Candidate portal"}</p>
             </div>
           </div>
@@ -216,7 +217,7 @@ export function Layout() {
                 alt="CheckIQ"
                 aria-hidden="true"
               />
-              <span className="text-base font-extrabold tracking-tight text-slate-900">CheckIQ</span>
+              <Wordmark className="text-base" />
             </div>
 
             <div className="ml-auto flex items-center gap-3">

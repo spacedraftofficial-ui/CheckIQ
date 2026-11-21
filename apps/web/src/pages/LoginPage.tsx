@@ -5,6 +5,7 @@ import { ApiError } from "../lib/api";
 import { homeRouteFor, useAuth } from "../lib/auth-context";
 import { InlineError } from "../components/States";
 import { AuthLayout } from "../components/Footer";
+import { BrandLockup } from "../components/Brand";
 
 const highlights = [
   "Upload your documents securely",
@@ -66,10 +67,7 @@ export function LoginPage() {
                 className="absolute -bottom-24 -left-10 h-64 w-64 rounded-full bg-violet-300/20 blur-3xl"
                 aria-hidden="true"
               />
-              <div className="relative flex items-center gap-3">
-                <img src="/logos/checkiq-icon.png" className="h-11 w-11 shrink-0" alt="CheckIQ" aria-hidden="true" />
-                <span className="text-xl font-extrabold tracking-tight">CheckIQ</span>
-              </div>
+              <BrandLockup tone="dark" showTagline className="relative" />
 
               <div className="relative">
                 <h2 className="text-3xl font-extrabold leading-tight tracking-tight xl:text-4xl">
@@ -94,12 +92,7 @@ export function LoginPage() {
 
             {/* Form panel */}
             <div className="p-6 sm:p-10">
-              <div className="mb-6 flex items-center gap-3 lg:hidden">
-                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-500 text-lg font-extrabold text-white shadow-lg shadow-blue-500/30">
-                  C
-                </span>
-                <span className="text-xl font-extrabold tracking-tight text-slate-900">CheckIQ</span>
-              </div>
+              <BrandLockup showTagline className="mb-6 lg:hidden" />
 
               <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Sign in</h1>
               <p className="mt-2 text-sm text-slate-500">

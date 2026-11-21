@@ -8,6 +8,7 @@ import { useAuth } from "../lib/auth-context";
 import type { SignupResponse } from "../lib/auth-context";
 import { InlineError } from "../components/States";
 import { AuthLayout } from "../components/Footer";
+import { BrandLockup } from "../components/Brand";
 import { AlertCircle, Check, MailCheck, X } from "lucide-react";
 
 const signupSchema = z
@@ -135,14 +136,10 @@ export function SignupPage() {
           <div className="overflow-hidden rounded-3xl bg-white shadow-2xl shadow-blue-200/50 ring-1 ring-slate-200">
             <div className="h-1.5 bg-gradient-to-r from-blue-600 to-violet-500" aria-hidden="true" />
             <div className="p-6 sm:p-10">
-              <div className="flex items-center gap-3">
-                <img src="/logos/checkiq-icon.png" className="h-12 w-12 shrink-0" alt="CheckIQ" aria-hidden="true" />
-                <div>
-                  <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-                    Create your account
-                  </h1>
-                </div>
-              </div>
+              <BrandLockup showTagline />
+              <h1 className="mt-6 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+                Create your account
+              </h1>
               <p className="mt-3 text-sm leading-relaxed text-slate-500">
                 Your Candidate ID is used to identify your background verification case. It is not
                 a password.
